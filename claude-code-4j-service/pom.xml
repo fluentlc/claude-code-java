@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>ai.claude.code</groupId>
+        <artifactId>claude-code-4j</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>claude-code-4j-service</artifactId>
+    <packaging>jar</packaging>
+    <name>claude-code-4j-service</name>
+    <description>
+        Core agent engine library — pure Java 21, framework-free.
+        Provides 9 capabilities, 8 ToolProviders, AgentLoop, and AgentAssembler.
+        Can be embedded in any Java application.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+    </dependencies>
+</project>

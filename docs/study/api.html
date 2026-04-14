@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>REST API 文档 — claude-code-4j</title>
+<style>
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --border:    #30363d;
+    --amber:     #f0a500;
+    --amber-dim: #7a5200;
+    --cyan:      #22d3ee;
+    --cyan-dim:  #0c4a56;
+    --text:      #c9d1d9;
+    --text-dim:  #8b949e;
+    --green:     #3fb950;
+    --red:       #f85149;
+    --purple:    #bc8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
+
+  .hero { background: linear-gradient(135deg, #0d1117 0%, #161b22 60%, #0c1a2e 100%); border-bottom: 1px solid var(--border); padding: 60px 24px 48px; text-align: center; }
+  .badge { display: inline-block; background: var(--cyan-dim); color: var(--cyan); font-size: 12px; font-weight: 600; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; margin-bottom: 18px; text-transform: uppercase; }
+  h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700; color: #fff; margin-bottom: 12px; }
+  h1 span { color: var(--amber); }
+  .subtitle { font-size: 1rem; color: var(--text-dim); margin-bottom: 24px; }
+  .back { display: inline-block; color: var(--amber); text-decoration: none; font-size: 14px; }
+  .back:hover { text-decoration: underline; }
+
+  main { max-width: 900px; margin: 0 auto; padding: 48px 24px 80px; }
+  h2 { font-size: 1.3rem; font-weight: 700; color: var(--amber); margin: 48px 0 20px; display: flex; align-items: center; gap: 10px; }
+  h2::before { content: ''; display: block; width: 4px; height: 20px; background: var(--amber); border-radius: 2px; }
+  h3 { font-size: 1rem; font-weight: 600; color: var(--cyan); margin: 24px 0 10px; }
+  p { color: var(--text-dim); margin-bottom: 12px; font-size: 14px; }
+
+  /* ─── endpoint card ─── */
+  .endpoint { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 32px; overflow: hidden; }
+  .ep-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .method { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 4px; min-width: 60px; text-align: center; }
+  .method.post { background: #1a2e1a; color: var(--green); border: 1px solid #1a4d1a; }
+  .method.delete { background: #2e1a1a; color: var(--red); border: 1px solid #4d1a1a; }
+  .ep-path { font-family: 'Courier New', monospace; font-size: 14px; color: #fff; }
+  .ep-desc { color: var(--text-dim); font-size: 13px; margin-left: auto; }
+  .ep-body { padding: 20px; }
+  pre { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-size: 13px; overflow-x: auto; color: var(--text); line-height: 1.5; margin-bottom: 16px; }
+  pre code { font-family: 'Courier New', monospace; }
+  .field-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+  .field-table th { text-align: left; color: var(--text-dim); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  .field-table td { padding: 7px 10px; border-bottom: 1px solid #21262d; }
+  .field-table td:first-child { font-family: 'Courier New', monospace; color: var(--cyan); }
+  .optional { color: var(--text-dim); font-size: 11px; margin-left: 4px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 10px; }
+  .tag-opt { background: #1a2530; color: var(--cyan-dim); border: 1px solid var(--cyan-dim); }
+  .tag-req { background: #2e1a00; color: var(--amber); border: 1px solid var(--amber-dim); }
+
+  /* ─── status badges ─── */
+  .status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-right: 8px; margin-bottom: 8px; }
+  .s200 { background: #0d2410; color: var(--green); border: 1px solid #1a4d1a; }
+  .s204 { background: #0d2410; color: var(--green); border: 1px solid #1a4d1a; }
+  .s400 { background: #2e1a1a; color: var(--red); border: 1px solid #4d1a1a; }
+  .s500 { background: #2e1a1a; color: var(--red); border: 1px solid #4d1a1a; }
+
+  /* ─── session lifecycle ─── */
+  .lifecycle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .lc-step { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 13px; }
+  .lc-arrow { color: var(--amber-dim); font-size: 18px; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+  footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
+  footer a { color: var(--amber); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">REST API Reference</div>
+  <h1><span>claude-code-4j</span> REST API</h1>
+  <p class="subtitle">Spring Boot 3.2 · OpenAPI-friendly · 会话持久化</p>
+  <a href="index.html" class="back">← 返回项目主页</a>
+</div>
+
+<main>
+
+  <!-- ═══ BASE URL ═══ -->
+  <h2>Base URL</h2>
+  <pre><code>http://localhost:8080</code></pre>
+  <p>启动方式：</p>
+  <pre><code>mvn exec:java -pl claude-code-4j-start \
+  -Dexec.mainClass="ai.claude.code.Application"</code></pre>
+  <p>健康检查：</p>
+  <pre><code>curl http://localhost:8080/actuator/health
+# {"status":"UP"}</code></pre>
+
+  <!-- ═══ ENDPOINTS ═══ -->
+  <h2>API 端点</h2>
+
+  <!-- POST /api/chat -->
+  <div class="endpoint">
+    <div class="ep-header">
+      <span class="method post">POST</span>
+      <span class="ep-path">/api/chat</span>
+      <span class="ep-desc">发送消息给 Agent</span>
+    </div>
+    <div class="ep-body">
+      <h3>请求体 Request Body</h3>
+      <table class="field-table">
+        <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+        <tr><td>sessionId <span class="tag tag-opt">可选</span></td><td>string</td><td>会话 ID。省略时自动生成 UUID，返回后请保存用于后续请求。</td></tr>
+        <tr><td>message <span class="tag tag-req">必填</span></td><td>string</td><td>用户输入的消息文本。</td></tr>
+      </table>
+      <pre><code>{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "帮我列出当前目录的文件"
+}</code></pre>
+
+      <h3>响应 Response</h3>
+      <div>
+        <span class="status s200">200 OK</span>
+      </div>
+      <table class="field-table">
+        <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+        <tr><td>sessionId</td><td>string</td><td>会话 ID（首次请求时为自动生成的 UUID）。</td></tr>
+        <tr><td>reply</td><td>string</td><td>Agent 的回复文本。</td></tr>
+      </table>
+      <pre><code>{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "reply": "当前目录包含以下文件：pom.xml, README.md, src/ ..."
+}</code></pre>
+
+      <h3>curl 示例</h3>
+      <pre><code># 首次对话（省略 sessionId，系统自动生成）
+curl -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message": "你好，介绍一下这个项目"}'
+
+# 继续对话（传入上一次返回的 sessionId）
+curl -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+    "message": "帮我创建一个 Hello.java"
+  }'</code></pre>
+    </div>
+  </div>
+
+  <!-- DELETE /api/sessions/{id} -->
+  <div class="endpoint">
+    <div class="ep-header">
+      <span class="method delete">DELETE</span>
+      <span class="ep-path">/api/sessions/{sessionId}</span>
+      <span class="ep-desc">清除会话历史</span>
+    </div>
+    <div class="ep-body">
+      <h3>路径参数 Path Parameters</h3>
+      <table class="field-table">
+        <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+        <tr><td>sessionId <span class="tag tag-req">必填</span></td><td>string</td><td>要清除的会话 ID。</td></tr>
+      </table>
+
+      <h3>响应 Response</h3>
+      <div>
+        <span class="status s204">204 No Content</span>
+      </div>
+      <p>删除成功，响应体为空。若 sessionId 不存在也返回 204（幂等）。</p>
+
+      <h3>curl 示例</h3>
+      <pre><code>curl -X DELETE \
+  http://localhost:8080/api/sessions/550e8400-e29b-41d4-a716-446655440000</code></pre>
+    </div>
+  </div>
+
+  <!-- GET /actuator/health -->
+  <div class="endpoint">
+    <div class="ep-header">
+      <span class="method post" style="background:#1a2530;color:var(--cyan);border-color:var(--cyan-dim)">GET</span>
+      <span class="ep-path">/actuator/health</span>
+      <span class="ep-desc">健康检查</span>
+    </div>
+    <div class="ep-body">
+      <pre><code>{"status": "UP"}</code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ SESSION LIFECYCLE ═══ -->
+  <h2>会话生命周期</h2>
+  <p>每个 sessionId 对应磁盘上的 <code>.sessions/{sessionId}.json</code>，存储完整消息历史。进程重启后自动恢复。</p>
+
+  <div class="lifecycle">
+    <div class="lc-step">POST /api/chat<br><small>省略 sessionId</small></div>
+    <div class="lc-arrow">→</div>
+    <div class="lc-step">自动生成 UUID<br><small>返回 sessionId</small></div>
+    <div class="lc-arrow">→</div>
+    <div class="lc-step">POST /api/chat<br><small>携带 sessionId</small></div>
+    <div class="lc-arrow">→</div>
+    <div class="lc-step">加载历史 + 运行<br><small>持久化保存</small></div>
+    <div class="lc-arrow">→</div>
+    <div class="lc-step">DELETE /api/sessions/{id}<br><small>清除历史</small></div>
+  </div>
+
+  <!-- ═══ ERROR HANDLING ═══ -->
+  <h2>错误处理</h2>
+  <div>
+    <span class="status s400">400 Bad Request</span>
+    <span class="status s500">500 Internal Server Error</span>
+  </div>
+  <p>Spring Boot 默认返回标准错误结构：</p>
+  <pre><code>{
+  "timestamp": "2026-04-14T12:00:00.000+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "...",
+  "path": "/api/chat"
+}</code></pre>
+
+  <!-- ═══ CONFIGURATION ═══ -->
+  <h2>服务器配置</h2>
+  <p>通过 <code>claude-code-4j-start/src/main/resources/application.properties</code> 修改：</p>
+  <pre><code>server.port=8080                    # 监听端口
+spring.application.name=claude-code-4j</code></pre>
+  <p>也可通过命令行参数覆盖：</p>
+  <pre><code>mvn exec:java -pl claude-code-4j-start \
+  -Dexec.mainClass="ai.claude.code.Application" \
+  -Dserver.port=9090</code></pre>
+
+</main>
+
+<footer>
+  claude-code-4j &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+  <a href="https://github.com/fluentlc/claude-code-4j">GitHub</a> &nbsp;·&nbsp;
+  <a href="index.html">项目主页</a>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MavenRunner">
+    <option name="jreName" value="1.8" />
+  </component>
+  <component name="tdkConfig">
+    <option name="projectKey" value="ad8b2cc6-2cad-4ec8-99f5-55cff5b5cc40" />
+  </component>
+</project>

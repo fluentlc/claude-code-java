@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>claude-code-4j — Java AI Agent Harness</title>
+<style>
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --border:    #30363d;
+    --amber:     #f0a500;
+    --amber-dim: #7a5200;
+    --cyan:      #22d3ee;
+    --cyan-dim:  #0c4a56;
+    --text:      #c9d1d9;
+    --text-dim:  #8b949e;
+    --green:     #3fb950;
+    --purple:    #bc8cff;
+    --red:       #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
+
+  /* ─── hero ─── */
+  .hero { background: linear-gradient(135deg, #0d1117 0%, #161b22 60%, #0c1a2e 100%); border-bottom: 1px solid var(--border); padding: 80px 24px 60px; text-align: center; }
+  .badge { display: inline-block; background: var(--amber-dim); color: var(--amber); font-size: 12px; font-weight: 600; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; text-transform: uppercase; }
+  h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: #fff; margin-bottom: 16px; }
+  h1 span { color: var(--amber); }
+  .subtitle { font-size: 1.1rem; color: var(--text-dim); max-width: 600px; margin: 0 auto 32px; }
+  .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 14px; text-decoration: none; transition: opacity 0.2s; }
+  .btn-primary { background: var(--amber); color: #000; }
+  .btn-outline { border: 1px solid var(--border); color: var(--text); }
+  .btn:hover { opacity: 0.85; }
+
+  /* ─── sections ─── */
+  section { max-width: 1100px; margin: 0 auto; padding: 60px 24px; }
+  h2 { font-size: 1.5rem; font-weight: 700; color: var(--amber); margin-bottom: 32px; display: flex; align-items: center; gap: 10px; }
+  h2::before { content: ''; display: block; width: 4px; height: 22px; background: var(--amber); border-radius: 2px; }
+  h3 { font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 8px; }
+  p { color: var(--text-dim); margin-bottom: 12px; }
+
+  /* ─── architecture diagram ─── */
+  .arch { display: grid; gap: 2px; }
+  .arch-layer { display: flex; align-items: stretch; gap: 2px; }
+  .arch-label { width: 140px; min-width: 140px; display: flex; align-items: center; justify-content: flex-end; padding-right: 16px; font-size: 12px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.5px; text-transform: uppercase; }
+  .arch-boxes { display: flex; gap: 2px; flex: 1; }
+  .arch-box { flex: 1; padding: 12px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; text-align: center; border: 1px solid; }
+  .layer-start   { background: #1a1000; border-color: var(--amber-dim);  color: var(--amber); }
+  .layer-agent   { background: #001a1f; border-color: var(--cyan-dim);   color: var(--cyan); }
+  .layer-cap     { background: #0d1f0d; border-color: #1a4d1a;           color: var(--green); }
+  .layer-core    { background: #1a0d1a; border-color: #3d1a5e;           color: var(--purple); }
+
+  /* ─── capability grid ─── */
+  .cap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .cap-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; transition: border-color 0.2s; }
+  .cap-card:hover { border-color: var(--amber-dim); }
+  .cap-icon { font-size: 1.4rem; margin-bottom: 8px; }
+  .cap-card h3 { color: var(--cyan); margin-bottom: 6px; }
+  .cap-card p { font-size: 13px; margin: 0; }
+
+  /* ─── tool provider table ─── */
+  .tp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .tp-item { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
+  .tp-item .name { font-size: 13px; font-weight: 600; color: var(--amber); font-family: 'Courier New', monospace; margin-bottom: 4px; }
+  .tp-item .tools { font-size: 12px; color: var(--text-dim); font-family: 'Courier New', monospace; }
+
+  /* ─── quickstart ─── */
+  .qs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 700px) { .qs-grid { grid-template-columns: 1fr; } }
+  .qs-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+  .qs-card h3 { color: var(--cyan); margin-bottom: 12px; }
+  pre { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: 13px; overflow-x: auto; color: var(--text); line-height: 1.5; }
+  code { font-family: 'Courier New', monospace; }
+
+  /* ─── extend section ─── */
+  .extend-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; counter-reset: step; }
+  .extend-step { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: relative; }
+  .extend-step::before { counter-increment: step; content: counter(step); position: absolute; top: -12px; left: 16px; background: var(--amber); color: #000; font-size: 12px; font-weight: 700; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .extend-step h3 { color: #fff; margin-bottom: 6px; }
+
+  /* ─── footer ─── */
+  footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
+  footer a { color: var(--amber); text-decoration: none; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <div class="badge">Open Source · Java 17 · MIT License</div>
+  <h1>claude-code-<span>4j</span></h1>
+  <p class="subtitle">可嵌入任何 Java 应用的 AI Agent 引擎<br>
+    Embeddable AI Agent Harness for Java — CLI &amp; REST API</p>
+  <div class="hero-buttons">
+    <a href="https://github.com/fluentlc/claude-code-4j" class="btn btn-primary">GitHub →</a>
+    <a href="api.html" class="btn btn-outline">REST API 文档</a>
+  </div>
+</div>
+
+<!-- ═══ ARCHITECTURE ═══ -->
+<section>
+  <h2>4 层架构</h2>
+
+  <div class="arch">
+    <div class="arch-layer">
+      <div class="arch-label">Start</div>
+      <div class="arch-boxes">
+        <div class="arch-box layer-start">Application.java<br><small>Spring Boot 3.2 入口</small></div>
+        <div class="arch-box layer-start">CliRunner<br><small>REPL / CLI 模式</small></div>
+        <div class="arch-box layer-start">ChatController<br><small>REST API</small></div>
+        <div class="arch-box layer-start">AgentBeans<br><small>Spring DI 配置</small></div>
+      </div>
+    </div>
+    <div style="height:4px"></div>
+    <div class="arch-layer">
+      <div class="arch-label">Agent</div>
+      <div class="arch-boxes">
+        <div class="arch-box layer-agent">AgentLoop<br><small>核心 while 循环</small></div>
+        <div class="arch-box layer-agent">AgentAssembler<br><small>组装工厂</small></div>
+        <div class="arch-box layer-agent">TeammateLoop<br><small>Teammate LLM 循环</small></div>
+        <div class="arch-box layer-agent">SlashRouter<br><small>/help /tasks /compact …</small></div>
+      </div>
+    </div>
+    <div style="height:4px"></div>
+    <div class="arch-layer">
+      <div class="arch-label">Capability</div>
+      <div class="arch-boxes">
+        <div class="arch-box layer-cap">TodoManager</div>
+        <div class="arch-box layer-cap">ContextCompactor</div>
+        <div class="arch-box layer-cap">BackgroundRunner</div>
+        <div class="arch-box layer-cap">TaskStore</div>
+        <div class="arch-box layer-cap">WorktreeManager</div>
+        <div class="arch-box layer-cap">SkillLoader</div>
+        <div class="arch-box layer-cap">MessageBus</div>
+        <div class="arch-box layer-cap">TeammateRunner</div>
+        <div class="arch-box layer-cap">SessionStore</div>
+      </div>
+    </div>
+    <div style="height:4px"></div>
+    <div class="arch-layer">
+      <div class="arch-label">Core</div>
+      <div class="arch-boxes">
+        <div class="arch-box layer-core">OpenAiClient</div>
+        <div class="arch-box layer-core">AnthropicClient</div>
+        <div class="arch-box layer-core">ClientFactory</div>
+        <div class="arch-box layer-core">BaseTools</div>
+        <div class="arch-box layer-core">SecurityUtils</div>
+        <div class="arch-box layer-core">ShellUtils</div>
+        <div class="arch-box layer-core">ToolHandler</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ═══ 10 CAPABILITIES ═══ -->
+<section>
+  <h2>10 项核心能力</h2>
+  <div class="cap-grid">
+    <div class="cap-card">
+      <div class="cap-icon">✅</div>
+      <h3>TodoManager</h3>
+      <p>Agent 自追踪任务 — 多步骤任务状态流转（pending → in_progress → completed），超过阈值自动注入提醒。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">🧠</div>
+      <h3>ContextCompactor</h3>
+      <p>三层上下文压缩管道：微压缩（每轮替换旧 tool_result）→ 自动全量压缩（消息数阈值）→ 手动 /compact。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">⚡</div>
+      <h3>BackgroundRunner</h3>
+      <p>线程池异步执行耗时命令，任务完成后自动注入 system-reminder 通知，不阻塞主对话。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">💾</div>
+      <h3>TaskStore</h3>
+      <p>JSON 文件持久化任务 + 有向无环依赖图。重启后自动恢复。支持 task_poll 轮询认领。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">🌿</div>
+      <h3>WorktreeManager</h3>
+      <p>Git Worktree 目录级隔离 — 每个特性分支独立工作区，wt_run 在隔离目录执行命令。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">🎯</div>
+      <h3>SkillLoader</h3>
+      <p>按需加载技能 — 扫描 skills/ 目录，模型主动调用 load_skill 时注入 prompt，不预占 context。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">📨</div>
+      <h3>MessageBus</h3>
+      <p>JSONL 文件消息总线实现多 Agent 协作，lead/worker 通过 msg_send / msg_read 异步通信。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">🗂️</div>
+      <h3>SessionStore</h3>
+      <p>REST 会话持久化 — 每个 sessionId 对应 .sessions/{id}.json，进程重启后会话历史自动恢复。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">🔒</div>
+      <h3>SecurityUtils</h3>
+      <p>危险命令黑名单（rm -rf /、sudo …）+ 路径遍历防护，bash 工具和 wt_run 均受保护。</p>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">🤝</div>
+      <h3>TeammateRunner</h3>
+      <p>Agent Teams 核心 — Lead 通过 spawn_teammate 动态创建 Teammate，每个 Teammate 在独立线程中运行完整 LLM 循环，通过 MessageBus 通信，通过 TaskStore 自主认领任务，60s 无工作自动退出。</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ═══ TOOL PROVIDERS ═══ -->
+<section>
+  <h2>8 个 ToolProvider</h2>
+  <div class="tp-list">
+    <div class="tp-item"><div class="name">FileTools</div><div class="tools">bash · read_file · write_file · edit_file</div></div>
+    <div class="tp-item"><div class="name">TodoTool</div><div class="tools">todo</div></div>
+    <div class="tp-item"><div class="name">SkillTool</div><div class="tools">load_skill</div></div>
+    <div class="tp-item"><div class="name">CompactTool</div><div class="tools">compact</div></div>
+    <div class="tp-item"><div class="name">TaskTools</div><div class="tools">task_create · task_list · task_get · task_update · task_poll</div></div>
+    <div class="tp-item"><div class="name">BackgroundTools</div><div class="tools">bg_submit · bg_status · bg_drain</div></div>
+    <div class="tp-item"><div class="name">TeamTools</div><div class="tools">msg_send · msg_read · task_poll · team_request_id · spawn_teammate · list_teammates</div></div>
+    <div class="tp-item"><div class="name">WorktreeTools</div><div class="tools">wt_create · wt_run · wt_status · wt_list</div></div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ═══ QUICKSTART ═══ -->
+<section>
+  <h2>快速上手</h2>
+  <div class="qs-grid">
+    <div class="qs-card">
+      <h3>1. 配置 API Key</h3>
+      <p>编辑 <code>claude-code-4j-start/src/main/resources/claude.properties</code>，填入 API Key：</p>
+      <pre><code>OPENAI_API_KEY=sk-xxxxxxxx
+OPENAI_BASE_URL=https://api.openai.com
+OPENAI_MODEL_ID=gpt-4o</code></pre>
+      <p>或通过环境变量覆盖（优先级最高）：</p>
+      <pre><code>export OPENAI_API_KEY=sk-xxxxxxxx</code></pre>
+    </div>
+    <div class="qs-card">
+      <h3>2a. CLI 交互模式</h3>
+      <p>进入 REPL 交互式终端：</p>
+      <pre><code># 编译
+mvn compile
+
+# 启动 CLI（REPL）
+mvn exec:java \
+  -pl claude-code-4j-start \
+  -Dexec.mainClass="ai.claude.code.Application" \
+  -Dspring.profiles.active=cli</code></pre>
+    </div>
+    <div class="qs-card">
+      <h3>2b. REST API 模式</h3>
+      <p>启动 HTTP 服务器（默认端口 8080）：</p>
+      <pre><code># 启动 REST 服务器
+mvn exec:java \
+  -pl claude-code-4j-start \
+  -Dexec.mainClass="ai.claude.code.Application"
+
+# 调用 API
+curl -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message": "你好"}'</code></pre>
+    </div>
+    <div class="qs-card">
+      <h3>Slash 命令（CLI 模式）</h3>
+      <pre><code>/help       查看所有命令
+/tasks      Todo + TaskStore 双视图
+/skill      列出可用技能
+/compact    手动压缩上下文
+/team       查看收件箱和任务
+/worktree   管理 Git Worktree
+quit        退出</code></pre>
+    </div>
+    <div class="qs-card">
+      <h3>Agent Teams 示例</h3>
+      <p>Lead 动态创建 Teammate，Teammate 在独立线程中运行真实 LLM 循环：</p>
+      <pre><code># 对 Lead 说（CLI 或 REST 均可）：
+请创建两个 Teammate：
+- reviewer：负责代码审查
+- tester：负责编写单元测试
+
+# Lead 会自动调用：
+spawn_teammate(name="reviewer", role="代码审查")
+spawn_teammate(name="tester",   role="单元测试")
+
+# 查看 Teammate 状态：
+list_teammates()
+# → [{"name":"reviewer","status":"working"},...]
+
+# Teammate 自主认领任务：
+# Lead 创建 task → Teammate task_poll 认领
+# → 完成后 msg_send 回报 lead</code></pre>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ═══ EXTEND ═══ -->
+<section>
+  <h2>扩展新工具</h2>
+  <div class="extend-steps">
+    <div class="extend-step">
+      <h3>实现 ToolProvider</h3>
+      <p>新建 <code>MyTools.java</code> 实现 <code>ToolProvider</code> 接口，实现 <code>handlers()</code> 和 <code>definitions()</code>。</p>
+    </div>
+    <div class="extend-step">
+      <h3>注册到 AgentAssembler</h3>
+      <p>在 <code>AgentAssembler.buildProviders()</code> 中加一行 <code>list.add(new MyTools(...))</code>。</p>
+    </div>
+    <div class="extend-step">
+      <h3>编译验证</h3>
+      <p>运行 <code>mvn compile</code>，然后启动 CLI 或 REST 服务器，Agent 将自动获得新工具能力。</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  claude-code-4j &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+  <a href="https://github.com/fluentlc/claude-code-4j">GitHub</a> &nbsp;·&nbsp;
+  <a href="api.html">REST API 文档</a>
+</footer>
+
+</body>
+</html>
