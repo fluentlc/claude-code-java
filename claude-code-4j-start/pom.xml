@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>ai.claude.code</groupId>
+        <artifactId>claude-code-4j</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>claude-code-4j-start</artifactId>
+    <packaging>jar</packaging>
+    <name>claude-code-4j-start</name>
+    <description>
+        Spring Boot application layer — provides CLI REPL and REST API.
+        Run as web server (default) or interactive CLI via Spring profiles.
+    </description>
+
+    <dependencies>
+        <!-- Core agent engine -->
+        <dependency>
+            <groupId>ai.claude.code</groupId>
+            <artifactId>claude-code-4j-service</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Web (REST API) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Health check endpoint -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Package as executable fat JAR -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

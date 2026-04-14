@@ -1,0 +1,4 @@
+# Default ignored files
+/.idea
+/claude-code-4j-service/target
+/claude-code-4j-start/target

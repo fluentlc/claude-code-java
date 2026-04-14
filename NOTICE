@@ -1,0 +1,13 @@
+claude-code-4j
+Copyright (c) 2025 fluentlc
+
+This software is licensed under the MIT License.
+
+---
+
+This project includes the following third-party software:
+
+Google Gson
+Copyright (c) 2008 Google Inc.
+Licensed under the Apache License, Version 2.0
+https://github.com/google/gson
