@@ -108,7 +108,7 @@ public class OpenAiClient {
      * 显式传参构造器 —— 用于需要自定义 Header 或 API 路径的场景（如 DashScope、Azure 等）。
      *
      * @param apiKey       API 密钥
-     * @param baseUrl      服务基础地址（不含路径），如 https://1688openai.alibaba-inc.com
+     * @param baseUrl      服务基础地址（不含路径），如 https://api.openai.com
      * @param model        模型 ID，如 qwen3-plus
      * @param extraHeaders 额外请求头，如 {"x-platform": "dashscope"}，可传 null
      * @param apiPath      API 路径，如 /v1/completion；传 null 则使用默认 /v1/chat/completions
