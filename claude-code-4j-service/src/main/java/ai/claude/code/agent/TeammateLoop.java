@@ -164,6 +164,7 @@ public class TeammateLoop implements Runnable {
             String text = OpenAiClient.extractText(assistantMsg);
             if (!text.isEmpty()) {
                 System.out.println("[Teammate " + name + "] " + ToolUtils.brief(text, 200));
+                runner.notifyTeamText(name, text);
             }
 
             if (!"tool_calls".equals(stopReason)) {
@@ -183,14 +184,24 @@ public class TeammateLoop implements Runnable {
 
                 System.out.println("[Teammate " + name + "] Tool: " + toolName
                         + " <- " + ToolUtils.brief(input.toString(), 80));
+                runner.notifyTeamToolStart(name, toolId, toolName, input);
 
                 ToolHandler handler = dispatch.get(toolName);
-                String result = handler != null
-                        ? handler.execute(input)
-                        : "Error: unknown tool '" + toolName + "'";
+                boolean success = true;
+                String result;
+                try {
+                    result = handler != null
+                            ? handler.execute(input)
+                            : "Error: unknown tool '" + toolName + "'";
+                    if (handler == null) success = false;
+                } catch (Exception ex) {
+                    result  = "Error: " + ex.getMessage();
+                    success = false;
+                }
 
                 System.out.println("[Teammate " + name + "] Tool: " + toolName
                         + " -> " + ToolUtils.brief(result, 120));
+                runner.notifyTeamToolEnd(name, toolId, success, result);
 
                 messages.add(OpenAiClient.toolResultMessage(toolId, result));
 

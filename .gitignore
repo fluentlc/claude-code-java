@@ -2,3 +2,7 @@
 /.idea
 /claude-code-4j-service/target
 /claude-code-4j-start/target
+/.sessions
+/.tasks
+/.team
+/.transcripts

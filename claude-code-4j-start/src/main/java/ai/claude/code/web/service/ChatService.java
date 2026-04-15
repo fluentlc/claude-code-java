@@ -32,7 +32,9 @@ public class ChatService {
      */
     public String[] chat(String sessionId, String message) {
         if (sessionId == null || sessionId.isBlank()) {
-            sessionId = UUID.randomUUID().toString();
+            String ts = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            sessionId = ts + "-" + UUID.randomUUID().toString().substring(0, 8);
         }
 
         // 从文件加载历史消息，进程重启后自动恢复 / Load history from file (survives restarts)

@@ -166,7 +166,7 @@ public class OpenAiClient {
         JsonArray fullMessages = new JsonArray();
         fullMessages.add(systemMessage(systemPrompt));
         for (JsonElement el : messages) {
-            fullMessages.add(el);
+            fullMessages.add(stripPrivateFields(el));
         }
 
         JsonObject body = new JsonObject();
@@ -179,6 +179,241 @@ public class OpenAiClient {
 
         String responseStr = doPost(apiPath, GSON.toJson(body));
         return JsonParser.parseString(responseStr).getAsJsonObject();
+    }
+
+    /**
+     * Streaming variant of createMessage(). Fires listener events for each chunk.
+     * Returns the assembled JsonObject in the same shape as createMessage()
+     * so AgentLoop can process tool_calls and finish_reason identically.
+     *
+     * @param listener event callbacks; must not be null
+     * @return assembled response JsonObject (choices[0].message + choices[0].finish_reason)
+     */
+    public JsonObject createMessageStream(String systemPrompt, JsonArray messages,
+                                          JsonArray tools, int maxTokens,
+                                          AgentEventListener listener) {
+        JsonArray fullMessages = new JsonArray();
+        fullMessages.add(systemMessage(systemPrompt));
+        for (JsonElement el : messages) fullMessages.add(stripPrivateFields(el));
+
+        JsonObject body = new JsonObject();
+        body.addProperty("model", model);
+        body.add("messages", fullMessages);
+        if (tools != null && tools.size() > 0) body.add("tools", tools);
+        body.addProperty("max_tokens", maxTokens);
+        body.addProperty("stream", true);
+
+        return doPostStream(apiPath, GSON.toJson(body), listener);
+    }
+
+    private JsonObject doPostStream(String path, String jsonBody, AgentEventListener listener) {
+        if (listener == null) throw new IllegalArgumentException("listener must not be null");
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(baseUrl + path);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(30_000);
+            conn.setReadTimeout(300_000);  // 5-minute read timeout for long tool chains
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Accept", "text/event-stream");
+            if (apiKey != null && !apiKey.isEmpty()) {
+                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+            }
+            for (Map.Entry<String, String> e : extraHeaders.entrySet()) {
+                conn.setRequestProperty(e.getKey(), e.getValue());
+            }
+
+            if (debugPrintPayload) System.out.println("=====流式请求报文=====\n" + jsonBody);
+
+            byte[] bodyBytes = jsonBody.getBytes(StandardCharsets.UTF_8);
+            conn.setRequestProperty("Content-Length", String.valueOf(bodyBytes.length));
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(bodyBytes);
+                os.flush();
+            }
+
+            int status = conn.getResponseCode();
+            if (status < 200 || status >= 300) {
+                InputStream errIs = conn.getErrorStream();
+                StringBuilder errSb = new StringBuilder();
+                if (errIs != null) {
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(errIs, StandardCharsets.UTF_8))) {
+                        String l; while ((l = br.readLine()) != null) errSb.append(l);
+                    }
+                }
+                throw new RuntimeException("API Error (HTTP " + status + "): " + errSb);
+            }
+
+            // Accumulators for assembling the complete response
+            StringBuilder textAccum      = new StringBuilder();
+            StringBuilder reasoningAccum = new StringBuilder();
+            long          reasoningMs    = 0;
+            // tool_calls[index] -> partial JsonObject being assembled
+            java.util.Map<Integer, JsonObject> toolCallMap = new java.util.LinkedHashMap<>();
+            // tool_calls[index] -> arguments string builder
+            java.util.Map<Integer, StringBuilder> argsMap  = new java.util.LinkedHashMap<>();
+            String finishReason = "";
+            JsonObject usageObj = null;
+
+            long thinkingStart = 0;
+            boolean inThinking = false;
+
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (!line.startsWith("data:")) continue;
+                    String data = line.substring(5).trim();
+                    if ("[DONE]".equals(data)) break;
+
+                    JsonObject chunk;
+                    try { chunk = JsonParser.parseString(data).getAsJsonObject(); }
+                    catch (Exception ex) { continue; }
+
+                    if (debugPrintPayload) System.out.println("[stream] " + data);
+
+                    // Extract usage if present
+                    if (chunk.has("usage") && !chunk.get("usage").isJsonNull()) {
+                        usageObj = chunk.getAsJsonObject("usage");
+                    }
+
+                    JsonArray choices = chunk.has("choices") ? chunk.getAsJsonArray("choices") : new JsonArray();
+                    if (choices.size() == 0) continue;
+                    JsonObject choice = choices.get(0).getAsJsonObject();
+
+                    if (choice.has("finish_reason") && !choice.get("finish_reason").isJsonNull()) {
+                        finishReason = choice.get("finish_reason").getAsString();
+                    }
+
+                    JsonObject delta = choice.has("delta") ? choice.getAsJsonObject("delta") : new JsonObject();
+
+                    // --- thinking / reasoning field (Claude / o1 / Qwen3 style) ---
+                    // Claude uses "reasoning", Qwen3/o1 uses "reasoning_content"
+                    String reasoningField = delta.has("reasoning_content") ? "reasoning_content"
+                            : delta.has("reasoning") ? "reasoning" : null;
+                    if (reasoningField != null && !delta.get(reasoningField).isJsonNull()) {
+                        String thinkText = delta.get(reasoningField).getAsString();
+                        if (!inThinking) {
+                            inThinking = true;
+                            thinkingStart = System.currentTimeMillis();
+                            listener.onThinkingStart();
+                        }
+                        reasoningAccum.append(thinkText);
+                        listener.onThinkingText(thinkText);
+                    }
+
+                    // --- text content ---
+                    if (delta.has("content") && !delta.get("content").isJsonNull()) {
+                        String text = delta.get("content").getAsString();
+                        if (!text.isEmpty()) {
+                            if (inThinking) {
+                                // Transition: thinking ended, text started
+                                inThinking = false;
+                                reasoningMs = System.currentTimeMillis() - thinkingStart;
+                                listener.onThinkingEnd(reasoningMs);
+                            }
+                            textAccum.append(text);
+                            listener.onTextDelta(text);
+                        }
+                    }
+
+                    // --- tool_calls deltas ---
+                    if (delta.has("tool_calls") && !delta.get("tool_calls").isJsonNull()) {
+                        for (JsonElement tcEl : delta.getAsJsonArray("tool_calls")) {
+                            JsonObject tcDelta = tcEl.getAsJsonObject();
+                            int idx = tcDelta.has("index") ? tcDelta.get("index").getAsInt() : 0;
+
+                            if (!toolCallMap.containsKey(idx)) {
+                                toolCallMap.put(idx, new JsonObject());
+                                argsMap.put(idx, new StringBuilder());
+                            }
+                            JsonObject tc = toolCallMap.get(idx);
+
+                            if (tcDelta.has("id") && !tcDelta.get("id").isJsonNull()) {
+                                String tcId = tcDelta.get("id").getAsString();
+                                // Some models (e.g. Qwen) return empty-string ids — fall back to a UUID
+                                if (tcId.isEmpty()) tcId = "tc-" + java.util.UUID.randomUUID().toString().substring(0, 8) + "-" + idx;
+                                tc.addProperty("id", tcId);
+                                tc.addProperty("type", "function");
+                            }
+                            if (tcDelta.has("function")) {
+                                JsonObject fnDelta = tcDelta.getAsJsonObject("function");
+                                if (fnDelta.has("name") && !fnDelta.get("name").isJsonNull()) {
+                                    if (!tc.has("function")) tc.add("function", new JsonObject());
+                                    tc.getAsJsonObject("function").addProperty("name", fnDelta.get("name").getAsString());
+                                }
+                                if (fnDelta.has("arguments") && !fnDelta.get("arguments").isJsonNull()) {
+                                    argsMap.get(idx).append(fnDelta.get("arguments").getAsString());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (inThinking) {
+                reasoningMs = System.currentTimeMillis() - thinkingStart;
+                listener.onThinkingEnd(reasoningMs);
+            }
+
+            // Finalize tool_calls: set assembled arguments
+            JsonArray toolCallsArray = new JsonArray();
+            for (Map.Entry<Integer, JsonObject> e : toolCallMap.entrySet()) {
+                JsonObject tc = e.getValue();
+                String argsStr = argsMap.get(e.getKey()).toString();
+                if (!tc.has("function")) tc.add("function", new JsonObject());
+                tc.getAsJsonObject("function").addProperty("arguments", argsStr);
+                // Guarantee every tool call has a non-empty id (some models omit it entirely)
+                if (!tc.has("id") || tc.get("id").getAsString().isEmpty()) {
+                    tc.addProperty("id", "tc-" + java.util.UUID.randomUUID().toString().substring(0, 8) + "-" + e.getKey());
+                }
+                toolCallsArray.add(tc);
+            }
+
+            // Assemble response in the same shape createMessage() returns.
+            // When tool_calls are present, set content to null per OpenAI spec
+            // (finish_reason=tool_calls implies content is null). Keeping text
+            // alongside tool_calls confuses some models in subsequent rounds.
+            JsonObject message = new JsonObject();
+            message.addProperty("role", "assistant");
+            if (toolCallsArray.size() > 0) {
+                message.add("content", com.google.gson.JsonNull.INSTANCE);
+                message.add("tool_calls", toolCallsArray);
+                // Preserve interleaved text (model streamed text before tool_calls) for display only
+                if (textAccum.length() > 0) {
+                    message.addProperty("_content", textAccum.toString());
+                }
+            } else if (textAccum.length() > 0) {
+                message.addProperty("content", textAccum.toString());
+            } else {
+                message.add("content", com.google.gson.JsonNull.INSTANCE);
+            }
+            // Store reasoning/thinking content for session persistence (display only, stripped before API calls)
+            if (reasoningAccum.length() > 0) {
+                message.addProperty("_reasoning", reasoningAccum.toString());
+                if (reasoningMs > 0) message.addProperty("_reasoning_ms", reasoningMs);
+            }
+
+            JsonObject choiceObj = new JsonObject();
+            choiceObj.add("message", message);
+            choiceObj.addProperty("finish_reason", finishReason);
+
+            JsonArray choicesArr = new JsonArray();
+            choicesArr.add(choiceObj);
+
+            JsonObject response = new JsonObject();
+            response.add("choices", choicesArr);
+            if (usageObj != null) response.add("usage", usageObj);
+
+            return response;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Stream request failed: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
     }
 
     private String doPost(String path, String jsonBody) {
@@ -421,6 +656,26 @@ public class OpenAiClient {
     //   }
     // }
     // ==================================================================================
+
+    /**
+     * Strip private/display-only fields (prefixed with "_") from a message element
+     * before sending to the API. Works on JsonObject messages; passes through other types unchanged.
+     * Creates a shallow copy so the original session message is not modified.
+     */
+    private static JsonElement stripPrivateFields(JsonElement el) {
+        if (!el.isJsonObject()) return el;
+        JsonObject src = el.getAsJsonObject();
+        boolean hasPrivate = false;
+        for (String key : src.keySet()) {
+            if (key.startsWith("_")) { hasPrivate = true; break; }
+        }
+        if (!hasPrivate) return el;
+        JsonObject copy = new JsonObject();
+        for (Map.Entry<String, JsonElement> entry : src.entrySet()) {
+            if (!entry.getKey().startsWith("_")) copy.add(entry.getKey(), entry.getValue());
+        }
+        return copy;
+    }
 
     /**
      * 构建 OpenAI 格式的工具定义。

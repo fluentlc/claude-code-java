@@ -5,6 +5,7 @@ import ai.claude.code.capability.ContextCompactor;
 import ai.claude.code.capability.MessageBus;
 import ai.claude.code.capability.TeammateRunner;
 import ai.claude.code.capability.TodoManager;
+import ai.claude.code.core.AgentEventListener;
 import ai.claude.code.core.OpenAiClient;
 import ai.claude.code.core.ToolHandler;
 import ai.claude.code.tool.ToolUtils;
@@ -115,11 +116,20 @@ public class AgentLoop {
 
                 if (TODO_TOOL.equals(toolName))    usedTodo    = true;
                 if (COMPACT_TOOL.equals(toolName)) usedCompact = true;
-                messages.add(OpenAiClient.toolResultMessage(toolId, result));
+                JsonObject toolMsg = OpenAiClient.toolResultMessage(toolId, result);
+                // Preserve full content for session replay — microCompact may compress 'content'
+                // but _display_content is kept intact (stripped before API calls by stripPrivateFields)
+                toolMsg.addProperty("_display_content", result);
+                messages.add(toolMsg);
             }
 
             // 压缩第三层：模型主动调用 compact 时执行 / Layer 3: model-triggered compact
-            if (usedCompact) inplaceReplace(messages, compactor.compact(messages, systemPrompt));
+            if (usedCompact) {
+                JsonArray compacted = compactor.compact(messages, systemPrompt);
+                String summary = extractCompactSummary(compacted);
+                markCompactSummaryInMessages(messages, summary);
+                inplaceReplace(messages, compacted);
+            }
 
             // 压缩第一层：微压缩（每轮替换旧 tool result）/ Layer 1: micro-compact old tool results
             inplaceReplace(messages, compactor.microCompact(messages));
@@ -150,8 +160,144 @@ public class AgentLoop {
         return lastText;
     }
 
+    /**
+     * Streaming variant of run(). Fires AgentEventListener callbacks for real-time output.
+     * Checks listener.isCancelled() before each tool-execution round to support disconnect abort.
+     *
+     * @param messages conversation history (appended in-place)
+     * @param listener event callbacks
+     * @return last text reply (may be empty if run ends on a tool call)
+     */
+    public String run(JsonArray messages, AgentEventListener listener) {
+        String lastText = "";
+
+        try {
+            for (int i = 0; i < MAX_TURNS; i++) {
+                if (listener.isCancelled()) break;
+
+                System.out.println("[Agent/SSE] 第 " + (i + 1) + " 轮...");
+                JsonObject response     = client.createMessageStream(systemPrompt, messages, toolDefs, 8000, listener);
+                JsonObject assistantMsg = OpenAiClient.getAssistantMessage(response);
+                String stopReason       = OpenAiClient.getStopReason(response);
+
+                messages.add(OpenAiClient.assistantMessage(assistantMsg));
+
+                String text = OpenAiClient.extractText(assistantMsg);
+                if (!text.isEmpty()) lastText = text;
+
+                if (!"tool_calls".equals(stopReason)) break;
+
+                if (listener.isCancelled()) break;
+
+                boolean usedTodo    = false;
+                boolean usedCompact = false;
+                JsonArray toolCalls = OpenAiClient.getToolCalls(assistantMsg);
+
+                for (JsonElement el : toolCalls) {
+                    if (listener.isCancelled()) break;
+
+                    JsonObject tc   = el.getAsJsonObject();
+                    String toolId   = tc.get("id").getAsString();
+                    JsonObject fn   = tc.getAsJsonObject("function");
+                    String toolName = fn.get("name").getAsString();
+                    JsonObject toolInput = JsonParser.parseString(
+                            fn.get("arguments").getAsString()).getAsJsonObject();
+
+                    listener.onToolStart(toolId, toolName, toolInput);
+                    System.out.println("[Tool/SSE] " + toolName + " <- " + ToolUtils.brief(toolInput.toString(), 100));
+
+                    ToolHandler handler = dispatch.get(toolName);
+                    boolean success = true;
+                    String result;
+                    try {
+                        result = handler != null
+                                ? handler.execute(toolInput)
+                                : "Error: unknown tool '" + toolName + "'";
+                        if (handler == null) success = false;
+                    } catch (Exception ex) {
+                        result = "Error: " + ex.getMessage();
+                        success = false;
+                    }
+
+                    System.out.println("[Tool/SSE] " + toolName + " -> " + ToolUtils.brief(result, 150));
+                    listener.onToolEnd(toolId, success, result);
+
+                    if (TODO_TOOL.equals(toolName))    usedTodo    = true;
+                    if (COMPACT_TOOL.equals(toolName)) usedCompact = true;
+                    JsonObject toolMsg = OpenAiClient.toolResultMessage(toolId, result);
+                    toolMsg.addProperty("_display_content", result);
+                    messages.add(toolMsg);
+                }
+
+                if (usedCompact) {
+                    JsonArray compacted = compactor.compact(messages, systemPrompt);
+                    String summary = extractCompactSummary(compacted);
+                    markCompactSummaryInMessages(messages, summary);
+                    listener.onCompactDone(summary);
+                    inplaceReplace(messages, compacted);
+                }
+                inplaceReplace(messages, compactor.microCompact(messages));
+                if (compactor.shouldAutoCompact(messages))
+                    inplaceReplace(messages, compactor.compact(messages, systemPrompt));
+
+                if (todoManager.needsReminder())
+                    messages.add(OpenAiClient.userMessage(
+                            "<system-reminder>Please update your todos to reflect current progress.</system-reminder>"));
+                if (!usedTodo) todoManager.tick();
+
+                for (String n : bgRunner.drainNotifications())
+                    messages.add(OpenAiClient.userMessage("<system-reminder>" + n + "</system-reminder>"));
+
+                for (JsonObject msg : messageBus.readInbox(LEAD_ID)) {
+                    String from    = msg.has("from")    ? msg.get("from").getAsString()    : "unknown";
+                    String content = msg.has("content") ? msg.get("content").getAsString() : msg.toString();
+                    messages.add(OpenAiClient.userMessage(
+                            "<system-reminder>[Message from " + from + "] " + content + "</system-reminder>"));
+                }
+            }
+        } finally {
+            listener.onDone();
+        }
+        return lastText;
+    }
+
+    /**
+     * 从压缩后的消息数组中提取摘要文本（第一条非 system-reminder 的 content）。
+     * Extract compact summary from the first meaningful message in the compacted array.
+     */
+    private String extractCompactSummary(JsonArray compacted) {
+        for (JsonElement el : compacted) {
+            if (!el.isJsonObject()) continue;
+            JsonObject msg = el.getAsJsonObject();
+            if (!msg.has("content") || msg.get("content").isJsonNull()) continue;
+            if (!msg.get("content").isJsonPrimitive()) continue;
+            String c = msg.get("content").getAsString().trim();
+            if (!c.isEmpty() && !c.startsWith("<system-reminder>")) return c;
+        }
+        return "Context compressed.";
+    }
+
+    /**
+     * 在 compact 执行前，给 messages 中的 compact tool result 消息打上 _compact_summary 标记。
+     * 该标记随 session 持久化，供历史恢复时渲染 Compact Card。
+     * Mark the compact tool result message with _compact_summary before replacing messages.
+     */
+    private void markCompactSummaryInMessages(JsonArray messages, String summary) {
+        for (JsonElement el : messages) {
+            if (!el.isJsonObject()) continue;
+            JsonObject msg = el.getAsJsonObject();
+            if (!"tool".equals(msg.has("role") ? msg.get("role").getAsString() : "")) continue;
+            if (!msg.has("_display_content")) continue;
+            String dc = msg.get("_display_content").getAsString();
+            if (dc.startsWith("Compact triggered")) {
+                msg.addProperty("_compact_summary", summary);
+            }
+        }
+    }
+
     /** in-place 用 src 替换 dst 的内容（保持 dst 引用不变）/ Replace dst content with src in-place */
     private void inplaceReplace(JsonArray dst, JsonArray src) {
+        if (dst == src) return; // same reference — compactor returned unchanged, nothing to do
         while (dst.size() > 0) dst.remove(0);
         for (JsonElement el : src) dst.add(el);
     }

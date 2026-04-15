@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>claude-code-4j · Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+<style>
+/* ── Linear Design System Tokens ── */
+:root {
+  /* Backgrounds */
+  --bg-page:   #08090a;
+  --bg-panel:  #0f1011;
+  --bg-surface:#191a1b;
+  --bg-hover:  #28282c;
+
+  /* Text */
+  --t1: #f7f8f8;
+  --t2: #d0d6e0;
+  --t3: #8a8f98;
+  --t4: #62666d;
+
+  /* Brand */
+  --brand:      #5e6ad2;
+  --accent:     #7170ff;
+  --accent-h:   #828fff;
+
+  /* Status */
+  --ok:    #10b981;
+  --warn:  #f59e0b;
+  --err:   #f87171;
+
+  /* Borders */
+  --b-std:    rgba(255,255,255,0.08);
+  --b-sub:    rgba(255,255,255,0.05);
+  --b-solid:  #23252a;
+
+  /* Accent tints */
+  --brand-tint:   rgba(94,106,210,0.10);
+  --brand-border: rgba(94,106,210,0.20);
+  --ok-tint:      rgba(16,185,129,0.10);
+  --ok-border:    rgba(16,185,129,0.20);
+  --warn-tint:    rgba(245,158,11,0.10);
+  --warn-border:  rgba(245,158,11,0.20);
+  --err-tint:     rgba(248,113,113,0.10);
+  --err-border:   rgba(248,113,113,0.20);
+
+  /* Typography */
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --feat: "cv01", "ss03";
+
+  /* Easing */
+  --ease: cubic-bezier(0.16,1,0.3,1);
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg-page);
+  color: var(--t1);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  font-feature-settings: var(--feat);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Topbar ── */
+.topbar {
+  height: 48px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--b-sub);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+.wordmark {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 510;
+  color: var(--t1);
+  letter-spacing: -0.13px;
+  font-feature-settings: var(--feat);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wordmark-logo {
+  width: 18px;
+  height: 18px;
+  background: var(--brand);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wordmark-logo svg { width: 10px; height: 10px; }
+.wordmark-slash { color: var(--t4); font-weight: 400; }
+.wordmark-page { color: var(--t3); font-weight: 400; }
+
+.tb-sep { width: 1px; height: 16px; background: var(--b-std); flex-shrink: 0; }
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 6px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--b-std);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 510;
+  color: var(--t3);
+  font-feature-settings: var(--feat);
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.status-dot.busy { background: var(--warn); animation: pulse 1.2s ease infinite; }
+.status-dot.err  { background: var(--err); }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+@keyframes spin   { to{transform:rotate(360deg)} }
+@keyframes blink  { 50%{opacity:0} }
+
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.token-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--t4);
+  font-feature-settings: var(--feat);
+}
+.token-bar-wrap {
+  width: 48px;
+  height: 2px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.token-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--brand);
+  border-radius: 1px;
+  transition: width 0.4s var(--ease);
+}
+
+.btn-new {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--b-std);
+  border-radius: 6px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 510;
+  font-feature-settings: var(--feat);
+  color: var(--t2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn-new:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: var(--b-std);
+  color: var(--t1);
+}
+.btn-new svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+/* ── Layout ── */
+.layout {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--b-sub);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sidebar-head {
+  padding: 16px 12px 8px;
+  font-size: 11px;
+  font-weight: 510;
+  font-feature-settings: var(--feat);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--t4);
+}
+.session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 6px 12px;
+}
+.session-list::-webkit-scrollbar { width: 3px; }
+.session-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+.session-item {
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+  margin-bottom: 1px;
+}
+.session-item:hover { background: rgba(255,255,255,0.03); }
+.session-item.active { background: var(--brand-tint); }
+
+.si-title {
+  font-size: 13px;
+  font-weight: 400;
+  font-feature-settings: var(--feat);
+  color: var(--t2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.13px;
+}
+.session-item.active .si-title { color: var(--accent); font-weight: 510; }
+.si-time {
+  font-size: 11px;
+  color: var(--t4);
+  margin-top: 1px;
+  font-feature-settings: var(--feat);
+}
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+#errBanner {
+  display: none;
+  background: var(--err-tint);
+  border-bottom: 1px solid var(--err-border);
+  padding: 7px 24px;
+  font-size: 12px;
+  font-weight: 510;
+  font-feature-settings: var(--feat);
+  color: var(--err);
+  text-align: center;
+}
+
+/* ── Messages ── */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 0 12px;
+  scroll-behavior: smooth;
+}
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 2px; }
+
+.msg-wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--t4);
+}
+.empty-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--brand);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.empty-icon svg { width: 20px; height: 20px; }
+.empty-title {
+  font-size: 15px;
+  font-weight: 510;
+  font-feature-settings: var(--feat);
+  color: var(--t2);
+  letter-spacing: -0.165px;
+  margin-bottom: 6px;
+}
+.empty-sub {
+  font-size: 13px;
+  color: var(--t4);
+  font-feature-settings: var(--feat);
+  letter-spacing: -0.13px;
+}
+
+/* ── User message ── */
+.msg-user {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+.user-bubble {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--b-std);
+  border-radius: 12px 12px 2px 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 400;
+  font-feature-settings: var(--feat);
+  color: var(--t1);
+  max-width: 68%;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  letter-spacing: -0.182px;
+}
+
+/* ── AI message ── */
+.msg-ai {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+.ai-avatar {
+  width: 24px;
+  height: 24px;
+  background: var(--brand);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.ai-avatar svg { width: 12px; height: 12px; }
+.ai-body { flex: 1; min-width: 0; }
+
+/* ── Think block ── */
+.think-block {
+  border: 1px solid var(--brand-border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  background: var(--brand-tint);
+}
+.think-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  cursor: pointer;
+  user-select: none;
+}
+.think-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--brand-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+.think-check {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ok-tint);
+  border: 1px solid var(--ok-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.think-check svg { width: 7px; height: 7px; }
+.think-label {
+  font-size: 12px;
+  font-weight: 510;
+  font-feature-settings: var(--feat);
+  color: var(--accent);
+}
+.think-label.done { color: var(--t4); font-weight: 400; }
+.think-dur { font-size: 11px; color: var(--t4); font-family: var(--mono); }
+.think-toggle { margin-left: auto; color: var(--t4); transition: transform 0.2s; }
+.think-block.open .think-toggle { transform: rotate(180deg); }
+.think-body {
+  padding: 0 11px 9px;
+  font-size: 12.5px;
+  color: var(--t3);
+  line-height: 1.75;
+  font-style: italic;
+  border-top: 1px solid var(--brand-border);
+  display: none;
+}
+.think-block.open .think-body { display: block; padding-top: 8px; }
+
+/* ── Tool block ── */
+.tool-block {
+  border: 1px solid var(--b-std);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.01);
+}
+.tool-block.running { border-color: var(--warn-border); background: var(--warn-tint); }
+.tool-block.done    { border-color: var(--ok-border); }
+.tool-block.failed  { border-color: var(--err-border); }
+
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  cursor: pointer;
+  user-select: none;
+}
+.tool-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tool-dot.running { background: var(--warn); box-shadow: 0 0 5px var(--warn); animation: pulse 1.2s ease infinite; }
+.tool-dot.done    { background: var(--ok); }
+.tool-dot.failed  { background: var(--err); }
+
+.tool-fn {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.tool-block.running .tool-fn { color: var(--warn); }
+.tool-block.done    .tool-fn { color: var(--ok); }
+.tool-block.failed  .tool-fn { color: var(--err); }
+
+.tool-status { font-size: 11px; color: var(--t4); }
+.tool-toggle { margin-left: auto; color: var(--t4); transition: transform 0.2s; }
+.tool-block.open .tool-toggle { transform: rotate(180deg); }
+
+.tool-body {
+  border-top: 1px solid var(--b-sub);
+  padding: 7px 11px 9px;
+  display: none;
+}
+.tool-block.open .tool-body { display: block; }
+
+.tool-label {
+  font-size: 10px;
+  font-weight: 510;
+  font-feature-settings: var(--feat);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--t4);
+  margin-bottom: 4px;
+}
+.tool-label.in  { color: rgba(245,158,11,0.6); }
+.tool-label.out { color: rgba(16,185,129,0.6); }
+.tool-label.err { color: rgba(248,113,113,0.6); }
+
+.tool-code {
+  background: var(--bg-page);
+  border: 1px solid var(--b-sub);
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--t3);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.6;
+  margin-bottom: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.tool-code:last-child { margin-bottom: 0; }
+.tool-code::-webkit-scrollbar { width: 3px; }
+.tool-code::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* ── AI text ── */
+.ai-text {
+  font-size: 14px;
+  font-weight: 400;
+  font-feature-settings: var(--feat);
+  color: var(--t1);
+  line-height: 1.75;
+  letter-spacing: -0.182px;
+  margin-top: 2px;
+}
+.ai-text code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--b-std);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 13px;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 1px;
+}
+
+/* ── Input area ── */
+.input-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 6px 24px 20px;
+}
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+.conn-text {
+  font-size: 11px;
+  font-weight: 400;
+  font-feature-settings: var(--feat);
+  color: var(--t4);
+}
+
+.input-box {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--b-std);
+  border-radius: 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+.input-box:focus-within {
+  border-color: rgba(113,112,255,0.3);
+  box-shadow: 0 0 0 3px rgba(113,112,255,0.07);
+}
+
+.input-row {
+  display: flex;
+  align-items: flex-end;
+  padding: 10px 10px 8px 14px;
+  gap: 8px;
+}
+textarea#msgInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 400;
+  font-feature-settings: var(--feat);
+  color: var(--t1);
+  line-height: 1.55;
+  min-height: 22px;
+  max-height: 140px;
+  letter-spacing: -0.182px;
+}
+textarea#msgInput::placeholder { color: var(--t4); }
+
+.send-btn {
+  width: 30px;
+  height: 30px;
+  background: var(--brand);
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, box-shadow 0.15s;
+  color: #fff;
+}
+.send-btn:hover { background: var(--accent); box-shadow: 0 0 12px rgba(113,112,255,0.35); }
+.send-btn:disabled { background: rgba(255,255,255,0.06); cursor: not-allowed; box-shadow: none; }
+.send-btn svg { width: 13px; height: 13px; }
+
+.input-footer {
+  display: flex;
+  align-items: center;
+  padding: 0 12px 8px;
+  gap: 4px;
+}
+.kbd {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--t4);
+  padding: 1px 5px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--b-sub);
+  border-radius: 4px;
+}
+.input-hint {
+  font-size: 11px;
+  font-feature-settings: var(--feat);
+  color: var(--t4);
+  margin-left: auto;
+}
+
+/* ── Markdown rendered content ── */
+.ai-text p { margin: 0 0 10px; }
+.ai-text p:last-child { margin-bottom: 0; }
+.ai-text h1,.ai-text h2,.ai-text h3,.ai-text h4 {
+  font-weight: 590; font-feature-settings: var(--feat);
+  letter-spacing: -0.24px; margin: 14px 0 6px; color: var(--t1);
+}
+.ai-text h1 { font-size: 18px; }
+.ai-text h2 { font-size: 16px; }
+.ai-text h3,.ai-text h4 { font-size: 14px; }
+.ai-text ul,.ai-text ol { padding-left: 20px; margin: 6px 0 10px; }
+.ai-text li { margin-bottom: 3px; }
+.ai-text pre {
+  background: var(--bg-page); border: 1px solid var(--b-std);
+  border-radius: 6px; padding: 10px 12px; overflow-x: auto;
+  margin: 8px 0; font-family: var(--mono); font-size: 12px;
+  color: var(--t2); line-height: 1.6;
+}
+.ai-text pre::-webkit-scrollbar { height: 3px; }
+.ai-text pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+.ai-text pre code { background: none; border: none; padding: 0; font-size: inherit; color: inherit; }
+.ai-text blockquote {
+  border-left: 2px solid var(--brand); margin: 8px 0;
+  padding: 4px 0 4px 12px; color: var(--t3);
+}
+.ai-text hr { border: none; border-top: 1px solid var(--b-sub); margin: 12px 0; }
+.ai-text a { color: var(--accent); text-decoration: none; }
+.ai-text a:hover { text-decoration: underline; }
+.ai-text strong { font-weight: 590; color: var(--t1); }
+.ai-text em { font-style: italic; color: var(--t2); }
+.ai-text table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
+.ai-text th,.ai-text td { border: 1px solid var(--b-std); padding: 6px 10px; text-align: left; }
+.ai-text th { background: rgba(255,255,255,0.03); font-weight: 510; color: var(--t2); }
+
+/* ── Workspace Card (Teammate) ── */
+.workspace-card {
+  margin: 6px 0;
+  border: 1px solid rgba(113,112,255,0.18);
+  border-radius: 8px;
+  background: rgba(94,106,210,0.04);
+  overflow: hidden;
+}
+.workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.workspace-header:hover { background: rgba(113,112,255,0.06); }
+.workspace-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(113,112,255,0.5);
+}
+.workspace-dot.done { background: var(--ok); box-shadow: 0 0 6px rgba(16,185,129,0.4); }
+.workspace-name {
+  font-size: 12px; font-weight: 590; color: var(--accent);
+  font-feature-settings: var(--feat); letter-spacing: -0.12px;
+}
+.workspace-status {
+  font-size: 11px; color: var(--t3); margin-left: 2px;
+  font-feature-settings: var(--feat);
+}
+.workspace-count {
+  font-size: 11px; color: var(--t4);
+  font-family: var(--mono); margin-left: auto;
+}
+.workspace-toggle {
+  flex-shrink: 0; color: var(--t4);
+  transition: transform 0.2s;
+  display: flex; align-items: center;
+}
+.workspace-card.open .workspace-toggle { transform: rotate(180deg); }
+.workspace-body {
+  display: none;
+  border-top: 1px solid rgba(113,112,255,0.12);
+  padding: 8px 10px;
+  flex-direction: column;
+  gap: 4px;
+}
+.workspace-card.open .workspace-body { display: flex; }
+.workspace-text {
+  font-size: 13px; color: var(--t2); line-height: 1.55;
+  margin-top: 6px; padding-top: 6px;
+  border-top: 1px solid var(--b-sub);
+}
+
+/* ── Compact Card ── */
+.compact-card {
+  margin: 6px 0;
+  border: 1px solid rgba(94,106,210,0.25);
+  border-radius: 8px;
+  background: rgba(94,106,210,0.06);
+  overflow: hidden;
+}
+.compact-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer;
+  transition: background 0.15s;
+}
+.compact-header:hover { background: rgba(94,106,210,0.08); }
+.compact-icon {
+  width: 16px; height: 16px; flex-shrink: 0; color: var(--brand);
+}
+.compact-title {
+  font-size: 12px; font-weight: 590; color: var(--brand);
+  font-feature-settings: var(--feat); letter-spacing: -0.12px;
+}
+.compact-hint {
+  font-size: 11px; color: var(--t4); margin-left: auto;
+  font-family: var(--mono);
+}
+.compact-toggle {
+  flex-shrink: 0; color: var(--t4);
+  transition: transform 0.2s; display: flex; align-items: center;
+}
+.compact-card.open .compact-toggle { transform: rotate(180deg); }
+.compact-body {
+  display: none;
+  border-top: 1px solid rgba(94,106,210,0.18);
+  padding: 10px 12px;
+}
+.compact-card.open .compact-body { display: block; }
+.compact-summary {
+  font-size: 13px; color: var(--t2); line-height: 1.65;
+  white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── Responsive ── */
+@media (max-width:640px) {
+  .sidebar { display: none; }
+  .wordmark-page { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="wordmark">
+    <div class="wordmark-logo">
+      <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2l1.8 3.6L14 6.5l-3 2.9.7 4.1L8 11.5l-3.7 1.9.7-4.1L2 6.5l4.2-.9z"/>
+      </svg>
+    </div>
+    claude-code-4j
+    <span class="wordmark-slash">/</span>
+    <span class="wordmark-page">Playground</span>
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <div class="status-pill">
+    <div class="status-dot" id="connPip"></div>
+    <span id="connText">就绪</span>
+  </div>
+
+  <div class="tb-right">
+    <div class="token-info">
+      <div class="token-bar-wrap"><div class="token-bar" id="tokenBar"></div></div>
+      <span id="tokenText" style="font-family:var(--mono);font-size:11px;">—</span>
+    </div>
+    <button class="btn-new" id="btnNew">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M6 2v8M2 6h8"/>
+      </svg>
+      新对话
+    </button>
+  </div>
+</div>
+
+<!-- Layout -->
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-head">对话历史</div>
+    <div class="session-list" id="sessionList"></div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div id="errBanner">连接已断开，请刷新重试</div>
+
+    <div class="messages" id="messages">
+      <div class="msg-wrap" id="msgWrap">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2l2.3 4.6L18 7.6l-4 3.9.9 5.5L10 14.5l-4.9 2.5.9-5.5-4-3.9 5.7-.9z"/>
+            </svg>
+          </div>
+          <div class="empty-title">claude-code-4j Agent</div>
+          <div class="empty-sub">发送消息开始与 Agent 对话</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-wrap">
+      <div class="conn-status">
+        <span class="conn-text" id="connSubText"></span>
+      </div>
+      <div class="input-box">
+        <div class="input-row">
+          <textarea id="msgInput" placeholder="发消息给 Agent…" rows="1"></textarea>
+          <button class="send-btn" id="sendBtn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 13V3M4 7l4-4 4 4"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <span class="kbd">Enter</span>
+          <span style="font-size:11px;color:var(--t4);margin-left:2px">发送</span>
+          <span class="kbd" style="margin-left:8px">Shift+Enter</span>
+          <span style="font-size:11px;color:var(--t4);margin-left:2px">换行</span>
+          <span class="input-hint">Agent 可读写文件 · 执行命令</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Markdown renderer ── */
+function renderMarkdown(text) {
+  if (typeof marked === 'undefined' || !text) return escHtml(text || '').replace(/\n/g, '<br>');
+  try {
+    return marked.parse(text, { breaks: true, gfm: true });
+  } catch(e) {
+    return escHtml(text).replace(/\n/g, '<br>');
+  }
+}
+
+/* ── Think block header HTML ── */
+function thinkHeaderHtml(label) {
+  return `<div class="think-header" onclick="this.parentElement.classList.toggle('open')">
+    <div class="think-check"><svg viewBox="0 0 8 8" fill="none" stroke="var(--ok)" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 4l2 2 3-3"/></svg></div>
+    <span class="think-label done">${escHtml(label)}</span>
+    <span class="think-toggle"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg></span>
+  </div>
+  <div class="think-body"></div>`;
+}
+
+/* ── State ── */
+let sessionId = null;
+let streaming  = false;
+let retries    = 0;
+const MAX_RETRY = 3;
+
+/* ── DOM refs ── */
+const msgWrap      = document.getElementById('msgWrap');
+const messages     = document.getElementById('messages');
+const msgInput     = document.getElementById('msgInput');
+const sendBtn      = document.getElementById('sendBtn');
+const connPip      = document.getElementById('connPip');
+const connText     = document.getElementById('connText');
+const connSubText  = document.getElementById('connSubText');
+const sessionList  = document.getElementById('sessionList');
+const errBanner    = document.getElementById('errBanner');
+const emptyState   = document.getElementById('emptyState');
+
+/* ── Textarea auto-resize ── */
+msgInput.addEventListener('input', () => {
+  msgInput.style.height = 'auto';
+  msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
+});
+
+/* ── Key handlers ── */
+msgInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+sendBtn.addEventListener('click', sendMessage);
+document.getElementById('btnNew').addEventListener('click', newConversation);
+
+/* ── Helpers ── */
+function setStatus(state, text) {
+  connPip.className = 'status-dot' + (state === 'busy' ? ' busy' : state === 'err' ? ' err' : '');
+  connText.textContent = state === 'busy' ? '运行中' : state === 'err' ? '错误' : '就绪';
+  connSubText.textContent = text || '';
+}
+
+function setInputDisabled(disabled) {
+  msgInput.disabled = disabled;
+  sendBtn.disabled  = disabled;
+}
+
+function scrollBottom() {
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function hideEmpty() {
+  if (emptyState) emptyState.style.display = 'none';
+}
+
+/* ── Append user bubble ── */
+function appendUserBubble(text) {
+  hideEmpty();
+  const row = document.createElement('div');
+  row.className = 'msg-user';
+  const bubble = document.createElement('div');
+  bubble.className = 'user-bubble';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  msgWrap.appendChild(row);
+  scrollBottom();
+}
+
+/* ── Append AI row, returns ai-body div ── */
+function appendAiRow() {
+  hideEmpty();
+  const row = document.createElement('div');
+  row.className = 'msg-ai';
+  row.innerHTML = `
+    <div class="ai-avatar">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2l1.8 3.6L14 6.5l-3 2.9.7 4.1L8 11.5l-3.7 1.9.7-4.1L2 6.5l4.2-.9z"/>
+      </svg>
+    </div>
+    <div class="ai-body"></div>`;
+  msgWrap.appendChild(row);
+  scrollBottom();
+  return row.querySelector('.ai-body');
+}
+
+/* ── Workspace Card (Teammate) ── */
+// agentId → { card, body, toolCount, textEl } map
+const workspaceMap = {};
+
+function ensureWorkspaceCard(agentId) {
+  if (workspaceMap[agentId]) return workspaceMap[agentId];
+  const card = document.createElement('div');
+  card.className = 'workspace-card open';
+  card.dataset.agentId = agentId;
+  card.innerHTML = `
+    <div class="workspace-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="workspace-dot"></div>
+      <span class="workspace-name">Teammate: ${escHtml(agentId)}</span>
+      <span class="workspace-status"> · 正在工作...</span>
+      <span class="workspace-count" style="display:none"></span>
+      <span class="workspace-toggle">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg>
+      </span>
+    </div>
+    <div class="workspace-body"></div>`;
+  // Append to the last ai-body in msgWrap
+  const aiRows = msgWrap.querySelectorAll('.msg-ai');
+  let targetBody = null;
+  if (aiRows.length > 0) {
+    targetBody = aiRows[aiRows.length - 1].querySelector('.ai-body');
+  }
+  if (!targetBody) targetBody = appendAiRow();
+  targetBody.appendChild(card);
+  scrollBottom();
+  workspaceMap[agentId] = {
+    card,
+    body: card.querySelector('.workspace-body'),
+    statusEl: card.querySelector('.workspace-status'),
+    countEl:  card.querySelector('.workspace-count'),
+    dotEl:    card.querySelector('.workspace-dot'),
+    textEl:   null,
+    toolCount: 0
+  };
+  return workspaceMap[agentId];
+}
+
+function finishWorkspaceCard(agentId) {
+  const ws = workspaceMap[agentId];
+  if (!ws) return;
+  ws.dotEl.className = 'workspace-dot done';
+  ws.statusEl.textContent = ' · 完成';
+  const cnt = ws.toolCount;
+  ws.countEl.textContent = cnt > 0 ? cnt + ' 个工具' : '';
+  ws.countEl.style.display = cnt > 0 ? '' : 'none';
+  ws.card.classList.remove('open'); // auto-collapse on done
+}
+
+function addToolBlockToWorkspace(agentId, id, name, inputObj) {
+  const ws = ensureWorkspaceCard(agentId);
+  ws.toolCount++;
+  // Reuse createToolBlock but target workspace body
+  const block = document.createElement('div');
+  block.className = 'tool-block running open';
+  block.dataset.toolId = id;
+  block.innerHTML = `
+    <div class="tool-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="tool-dot running"></div>
+      <span class="tool-fn">${escHtml(name)}</span>
+      <span class="tool-status"> · 执行中</span>
+      <span class="tool-toggle"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg></span>
+    </div>
+    <div class="tool-body">
+      <div class="tool-label in">Input</div>
+      <div class="tool-code">${escHtml(JSON.stringify(inputObj, null, 2))}</div>
+    </div>`;
+  ws.body.appendChild(block);
+  scrollBottom();
+}
+
+function addTextToWorkspace(agentId, text) {
+  const ws = workspaceMap[agentId];
+  if (!ws) return;
+  if (!ws.textEl) {
+    ws.textEl = document.createElement('div');
+    ws.textEl.className = 'workspace-text';
+    ws.body.appendChild(ws.textEl);
+  }
+  ws.textEl.textContent += text;
+  scrollBottom();
+}
+
+/* ── Compact Card ── */
+function createCompactCard(summary) {
+  hideEmpty();
+  const card = document.createElement('div');
+  card.className = 'compact-card open';
+  card.innerHTML = `
+    <div class="compact-header" onclick="this.parentElement.classList.toggle('open')">
+      <svg class="compact-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 4h12M4 8h8M6 12h4"/>
+      </svg>
+      <span class="compact-title">Context Compressed</span>
+      <span class="compact-hint">点击展开摘要</span>
+      <span class="compact-toggle">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg>
+      </span>
+    </div>
+    <div class="compact-body">
+      <div class="compact-summary">${escHtml(summary || 'Context compressed.')}</div>
+    </div>`;
+  msgWrap.appendChild(card);
+  scrollBottom();
+}
+
+/* ── Think block ── */
+function createThinkBlock(aiBody) {
+  const block = document.createElement('div');
+  block.className = 'think-block open';
+  block.innerHTML = `
+    <div class="think-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="think-spinner"></div>
+      <span class="think-label">正在思考...</span>
+      <span class="think-toggle">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg>
+      </span>
+    </div>
+    <div class="think-body"></div>`;
+  aiBody.appendChild(block);
+  scrollBottom();
+  return {
+    block,
+    body:      block.querySelector('.think-body'),
+    spinnerEl: block.querySelector('.think-spinner'),
+    label:     block.querySelector('.think-label')
+  };
+}
+
+function finishThinkBlock(refs, durationMs) {
+  const secs = (durationMs / 1000).toFixed(1);
+  refs.spinnerEl.outerHTML = `<div class="think-check"><svg viewBox="0 0 8 8" fill="none" stroke="var(--ok)" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 4l2 2 3-3"/></svg></div>`;
+  refs.label.textContent = `已思考 ${secs}s`;
+  refs.label.classList.add('done');
+  refs.block.classList.remove('open');
+}
+
+/* ── Tool block ── */
+function createToolBlock(aiBody, id, name, inputObj) {
+  const block = document.createElement('div');
+  block.className = 'tool-block running open';
+  block.dataset.toolId = id;
+  block.innerHTML = `
+    <div class="tool-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="tool-dot running"></div>
+      <span class="tool-fn">${escHtml(name)}</span>
+      <span class="tool-status"> · 执行中</span>
+      <span class="tool-toggle">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg>
+      </span>
+    </div>
+    <div class="tool-body">
+      <div class="tool-label in">Input</div>
+      <div class="tool-code">${escHtml(JSON.stringify(inputObj, null, 2))}</div>
+    </div>`;
+  aiBody.appendChild(block);
+  scrollBottom();
+}
+
+function finishToolBlock(id, success, result) {
+  const block = document.querySelector(`.tool-block[data-tool-id="${CSS.escape(id)}"]`);
+  if (!block) return;
+  const state = success ? 'done' : 'failed';
+  block.className = `tool-block ${state}`;
+  block.querySelector('.tool-dot').className = `tool-dot ${state}`;
+  block.querySelector('.tool-status').textContent = success ? ' · 完成' : ' · 失败';
+
+  const body = block.querySelector('.tool-body');
+  const lbl = document.createElement('div');
+  lbl.className = `tool-label ${success ? 'out' : 'err'}`;
+  lbl.textContent = success ? 'Output' : 'Error';
+  const code = document.createElement('div');
+  code.className = 'tool-code';
+  code.textContent = result;
+  body.appendChild(lbl);
+  body.appendChild(code);
+  scrollBottom();
+}
+
+/* ── Send message ── */
+async function sendMessage() {
+  const text = msgInput.value.trim();
+  if (!text || streaming) return;
+
+  msgInput.value = '';
+  msgInput.style.height = 'auto';
+  setInputDisabled(true);
+  streaming = true;
+  retries   = 0;
+  errBanner.style.display = 'none';
+  // Clear workspace map for this new message round
+  Object.keys(workspaceMap).forEach(k => delete workspaceMap[k]);
+
+  appendUserBubble(text);
+  const aiBody = appendAiRow();
+
+  setStatus('busy', '正在连接...');
+
+  let thinkRefs = null;
+  let textEl    = null;
+  let cursor    = null;
+
+  function getOrCreateTextEl() {
+    if (!textEl) {
+      textEl = document.createElement('div');
+      textEl.className = 'ai-text';
+      cursor = document.createElement('span');
+      cursor.className = 'cursor';
+      textEl.appendChild(cursor);
+      aiBody.appendChild(textEl);
+    }
+    return { textEl, cursor };
+  }
+
+  async function doStreamV2() {
+    try {
+      const res = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, message: text })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus('busy', '接收数据...');
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer    = '';
+      let eventName = 'message';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventName = line.substring(6).trim();
+          } else if (line.startsWith('data:')) {
+            const data = line.substring(5).trim();
+            handleSseEvent(eventName, data);
+            eventName = 'message';
+          }
+        }
+      }
+
+      finishStreaming();
+    } catch (e) {
+      if (retries < MAX_RETRY) {
+        retries++;
+        const delay = Math.pow(2, retries - 1) * 1000;
+        setStatus('err', `连接断开，${delay/1000}s 后重试 (${retries}/${MAX_RETRY})...`);
+        await new Promise(r => setTimeout(r, delay));
+        aiBody.innerHTML = '';
+        thinkRefs = null;
+        textEl = null;
+        cursor = null;
+        await doStreamV2();
+      } else {
+        setStatus('err', '连接失败');
+        errBanner.style.display = 'block';
+        finishStreaming();
+      }
+    }
+  }
+
+  function handleSseEvent(evtName, data) {
+    if (!data || data === '[DONE]') return;
+    let payload;
+    try { payload = JSON.parse(data); } catch { return; }
+
+    switch (evtName) {
+      case 'session_id':
+        sessionId = payload.sessionId;
+        setStatus('busy', `会话 ${sessionId.substring(0,8)}…`);
+        break;
+
+      case 'thinking_start':
+        thinkRefs = createThinkBlock(aiBody);
+        break;
+
+      case 'thinking_text':
+        if (thinkRefs) { thinkRefs.body.textContent += payload.text; scrollBottom(); }
+        break;
+
+      case 'thinking_end':
+        if (thinkRefs) finishThinkBlock(thinkRefs, payload.duration_ms || 0);
+        break;
+
+      case 'tool_start':
+        createToolBlock(aiBody, payload.id, payload.name, payload.input || {});
+        break;
+
+      case 'tool_end':
+        finishToolBlock(payload.id, true, payload.result || '');
+        break;
+
+      case 'tool_error':
+        finishToolBlock(payload.id, false, payload.result || '');
+        break;
+
+      case 'text_delta': {
+        const { textEl: el, cursor: cur } = getOrCreateTextEl();
+        // Accumulate raw text for markdown rendering on completion
+        el._rawText = (el._rawText || '') + payload.text;
+        el.insertBefore(document.createTextNode(payload.text), cur);
+        scrollBottom();
+        break;
+      }
+
+      case 'done':
+        if (payload && payload.usage) updateTokenMeter(payload.usage);
+        if (cursor) { cursor.remove(); cursor = null; }
+        // Re-render accumulated text as markdown
+        if (textEl && textEl._rawText) {
+          textEl.innerHTML = renderMarkdown(textEl._rawText);
+        }
+        loadSessionList();
+        break;
+
+      case 'error':
+        setStatus('err', payload.message || '未知错误');
+        if (cursor) cursor.remove();
+        finishStreaming();
+        break;
+
+      // ── Teammate workspace events ──
+      case 'team_tool_start':
+        addToolBlockToWorkspace(payload.agentId, payload.id, payload.name, payload.input || {});
+        break;
+
+      case 'team_tool_end':
+        finishToolBlock(payload.id, payload.success !== false, payload.result || '');
+        break;
+
+      case 'team_text':
+        addTextToWorkspace(payload.agentId, payload.text || '');
+        break;
+
+      case 'team_done':
+        finishWorkspaceCard(payload.agentId);
+        break;
+
+      // ── Compact card ──
+      case 'compact_done':
+        createCompactCard(payload.summary || '');
+        break;
+    }
+  }
+
+  function finishStreaming() {
+    streaming = false;
+    setInputDisabled(false);
+    setStatus('', '');
+    msgInput.focus();
+  }
+
+  await doStreamV2();
+}
+
+/* ── Token meter ── */
+function updateTokenMeter(usage) {
+  const total = (usage.prompt_tokens || usage.input_tokens || 0)
+              + (usage.completion_tokens || usage.output_tokens || 0);
+  const pct   = Math.min(100, (total / 128000) * 100);
+  document.getElementById('tokenBar').style.width = pct + '%';
+  document.getElementById('tokenText').textContent =
+      total >= 1000 ? (total / 1000).toFixed(1) + 'k' : total + ' tok';
+}
+
+/* ── Session sidebar ── */
+async function loadSessionList() {
+  try {
+    const res = await fetch('/api/sessions');
+    if (!res.ok) return;
+    const sessions = await res.json();
+    sessionList.innerHTML = '';
+    if (sessions.length === 0) {
+      sessionList.innerHTML = '<div style="padding:10px 8px;font-size:12px;color:var(--t4)">暂无历史对话</div>';
+      return;
+    }
+    for (const s of sessions) {
+      const item = document.createElement('div');
+      item.className = 'session-item' + (s.sessionId === sessionId ? ' active' : '');
+      item.dataset.id = s.sessionId;
+      item.innerHTML = `
+        <div class="si-title">${escHtml(s.preview || '（空会话）')}</div>
+        <div class="si-time">${escHtml(formatRelativeTime(s.updatedAt))}</div>`;
+      item.addEventListener('click', () => switchSession(s.sessionId));
+      sessionList.appendChild(item);
+    }
+  } catch (e) { console.warn('loadSessionList failed', e); }
+}
+
+async function switchSession(id) {
+  if (streaming) return;
+  sessionId = id;
+  msgWrap.innerHTML = '';
+  setStatus('', '加载历史...');
+  try {
+    const res = await fetch(`/api/sessions/${id}/messages`);
+    if (!res.ok) throw new Error('Failed');
+    const json = await res.json();
+    const msgs = Array.isArray(json.messages) ? json.messages : [];
+
+    // Build tool_call_id → tool result message index for O(1) lookup
+    const toolResults = {};
+    for (const msg of msgs) {
+      if (msg.role === 'tool' && msg.tool_call_id) {
+        toolResults[msg.tool_call_id] = msg;
+      }
+    }
+
+    let visibleCount = 0;
+    for (const msg of msgs) {
+      // Skip internal system-reminder injections stored as user messages
+      if (msg.role === 'user' && typeof msg.content === 'string'
+          && msg.content.includes('<system-reminder>')) continue;
+      // Compact tool result: show as Compact Card
+      if (msg.role === 'tool' && typeof msg._compact_summary === 'string') {
+        createCompactCard(msg._compact_summary);
+        visibleCount++;
+        continue;
+      }
+      // Skip other role="tool" — rendered as part of the assistant message below
+      if (msg.role === 'tool') continue;
+
+      if (msg.role === 'user' && typeof msg.content === 'string') {
+        appendUserBubble(msg.content);
+        visibleCount++;
+
+      } else if (msg.role === 'assistant') {
+        const content         = (typeof msg.content === 'string') ? msg.content : '';
+        const interleaved     = (typeof msg._content === 'string') ? msg._content : '';
+        const reasoning       = (typeof msg._reasoning === 'string') ? msg._reasoning : '';
+        const toolCalls       = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
+        if (!content && !interleaved && !reasoning && toolCalls.length === 0) continue;
+
+        const aiBody = appendAiRow();
+        visibleCount++;
+
+        // Think block
+        if (reasoning) {
+          const durationMs = (typeof msg._reasoning_ms === 'number') ? msg._reasoning_ms : 0;
+          const durationLabel = durationMs > 0
+            ? `已思考 ${(durationMs / 1000).toFixed(1)}s`
+            : '已思考';
+          const block = document.createElement('div');
+          block.className = 'think-block';
+          block.innerHTML = thinkHeaderHtml(durationLabel);
+          block.querySelector('.think-body').textContent = reasoning;
+          aiBody.appendChild(block);
+        }
+
+        // Interleaved text: model sent text BEFORE tool_calls (preserved in _content)
+        // Render it before tool blocks to match live streaming order
+        if (interleaved) {
+          const el = document.createElement('div');
+          el.className = 'ai-text';
+          el.innerHTML = renderMarkdown(interleaved);
+          aiBody.appendChild(el);
+        }
+
+        // Tool call blocks
+        for (const tc of toolCalls) {
+          const tcId   = tc.id || '';
+          const name   = (tc.function && tc.function.name) ? tc.function.name : '(unknown)';
+          let   args   = {};
+          try { args = JSON.parse((tc.function && tc.function.arguments) || '{}'); } catch(e) {}
+          const resultMsg     = toolResults[tcId];
+          // Prefer _display_content (full, pre-compression) over compressed content
+          const resultContent = resultMsg
+            ? (resultMsg._display_content || resultMsg.content || '')
+            : '';
+          const isCompressed  = resultMsg && !resultMsg._display_content
+            && typeof resultMsg.content === 'string'
+            && resultMsg.content.startsWith('[Previous:');
+
+          // compact tool block stays collapsed (compact card already shown separately)
+          const isCompactTool = (name === 'compact');
+          const block = document.createElement('div');
+          block.className = isCompactTool ? 'tool-block done' : 'tool-block done open';
+          block.dataset.toolId = tcId;
+          block.innerHTML = `
+            <div class="tool-header" onclick="this.parentElement.classList.toggle('open')">
+              <div class="tool-dot done"></div>
+              <span class="tool-fn">${escHtml(name)}</span>
+              <span class="tool-status"> · 完成</span>
+              <span class="tool-toggle"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg></span>
+            </div>
+            <div class="tool-body">
+              <div class="tool-label in">Input</div>
+              <div class="tool-code">${escHtml(JSON.stringify(args, null, 2))}</div>
+              ${resultContent ? `<div class="tool-label out">Output${isCompressed ? ' (compressed)' : ''}</div><div class="tool-code">${escHtml(resultContent)}</div>` : ''}
+            </div>`;
+          aiBody.appendChild(block);
+        }
+
+        // Text reply (rendered as markdown)
+        if (content) {
+          const el = document.createElement('div');
+          el.className = 'ai-text';
+          el.innerHTML = renderMarkdown(content);
+          aiBody.appendChild(el);
+        }
+      }
+    }
+
+    if (visibleCount === 0 && emptyState) {
+      msgWrap.appendChild(emptyState);
+      emptyState.style.display = '';
+    }
+  } catch (e) { console.warn('switchSession failed', e); }
+  setStatus('', '');
+  document.querySelectorAll('.session-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+  scrollBottom();
+}
+
+function newConversation() {
+  if (streaming) return;
+  sessionId = null;
+  msgWrap.innerHTML = '';
+  if (emptyState) {
+    msgWrap.appendChild(emptyState);
+    emptyState.style.display = '';
+  }
+  setStatus('', '');
+  document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
+  msgInput.focus();
+}
+
+function formatRelativeTime(isoStr) {
+  if (!isoStr) return '';
+  const date = new Date(isoStr);
+  if (isNaN(date.getTime())) return '';
+  const diff = Date.now() - date.getTime();
+  if (diff < 60000)    return '刚刚';
+  if (diff < 3600000)  return Math.floor(diff / 60000) + ' 分钟前';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+  return Math.floor(diff / 86400000) + ' 天前';
+}
+
+/* ── Init ── */
+loadSessionList();
+</script>
+</body>
+</html>

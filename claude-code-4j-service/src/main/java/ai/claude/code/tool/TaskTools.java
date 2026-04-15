@@ -120,7 +120,7 @@ public class TaskTools implements ToolProvider {
                 buildTaskCreateDef(),
                 OpenAiClient.toolDef(
                         "task_list",
-                        "List all tasks with their status and blocking dependencies.",
+                        "List teammate tasks created via task_create. NOT for checking your own todo items — use the todo tool for that.",
                         ToolUtils.emptySchema()
                 ),
                 OpenAiClient.toolDef(
@@ -193,7 +193,7 @@ public class TaskTools implements ToolProvider {
 
         return OpenAiClient.toolDef(
                 "task_create",
-                "Create a new task with an optional description and dependency list.",
+                "Create a task for a teammate to work on. Use this ONLY when coordinating with spawned teammates, not for your own personal to-do items.",
                 schema
         );
     }

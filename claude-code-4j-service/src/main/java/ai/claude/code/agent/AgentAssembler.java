@@ -129,13 +129,28 @@ public class AgentAssembler {
     }
 
     private static String buildSystemPrompt(SkillLoader skillLoader, String workDir) {
-        return "You are a coding assistant running at " + workDir + ".\n\n"
-                + "## Rules\n"
-                + "- Use the todo tool to plan multi-step tasks.\n"
-                + "- Mark tasks in_progress before starting, completed when done.\n"
-                + "- Prefer tools over prose. Be concise.\n\n"
+        return "You are a LEAD coding assistant running at " + workDir + ".\n\n"
+                + "## Execution Model — CRITICAL\n"
+                + "You are action-oriented. When given a task:\n"
+                + "1. Optionally call `todo` to plan your steps.\n"
+                + "2. IMMEDIATELY execute the work: call write_file, bash, read_file, etc.\n"
+                + "3. Do NOT call msg_read, task_list, or task_create until AFTER you have called spawn_teammate.\n"
+                + "   Before spawning a teammate, there are zero messages and zero tasks — checking is wasteful.\n"
+                + "4. After spawn_teammate, you may check msg_read ONCE per round to see if the teammate replied.\n\n"
+                + "## Two Separate Task Systems\n"
+                + "- `todo` — YOUR personal in-memory checklist for your own steps. Use it; then execute.\n"
+                + "- `task_create` / `task_list` / `task_update` — Only for work assigned to spawned teammates.\n\n"
+                + "## When User Asks You to Use an Agent / Reviewer\n"
+                + "1. Do the prep work yourself first (write the file, load the skill).\n"
+                + "2. Call `task_create` with subject + description.\n"
+                + "3. Call `spawn_teammate` with a clear role system prompt.\n"
+                + "4. Check `msg_read` once per round to see replies. When done, summarize.\n\n"
+                + "## Forbidden Patterns\n"
+                + "- NEVER call task_poll or idle (worker-only tools).\n"
+                + "- NEVER call msg_read or task_list before spawning a teammate — they will be empty.\n"
+                + "- NEVER clear your todo list until all items are done.\n\n"
                 + "## Available Skills\n"
                 + skillLoader.getDescriptions()
-                + "\nWhen a user request matches a skill, ALWAYS call load_skill first.\n";
+                + "\nWhen a user request matches a skill, call load_skill first, then follow the skill's instructions.\n";
     }
 }
