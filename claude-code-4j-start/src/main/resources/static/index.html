@@ -337,24 +337,27 @@ body {
 
 /* ── AI message ── */
 .msg-ai {
+  margin-bottom: 20px;
+}
+.ai-reply-row {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
   align-items: flex-start;
 }
 .ai-avatar {
   width: 24px;
   height: 24px;
-  background: var(--brand);
+  background: linear-gradient(135deg, #5e6ad2 0%, #7170ff 100%);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: 2px;
+  box-shadow: 0 0 0 1px rgba(113,112,255,0.25);
 }
-.ai-avatar svg { width: 12px; height: 12px; }
-.ai-body { flex: 1; min-width: 0; }
+.ai-avatar svg { width: 13px; height: 13px; }
+.ai-body { min-width: 0; }
 
 /* ── Think block ── */
 .think-block {
@@ -658,7 +661,7 @@ textarea#msgInput::placeholder { color: var(--t4); }
 .ai-text th,.ai-text td { border: 1px solid var(--b-std); padding: 6px 10px; text-align: left; }
 .ai-text th { background: rgba(255,255,255,0.03); font-weight: 510; color: var(--t2); }
 
-/* ── Teammate Status Card (slim, replaces old workspace-card) ── */
+/* ── Teammate Status Card (slim, summary card after done) ── */
 .tm-status-card {
   display: flex;
   align-items: center;
@@ -668,6 +671,34 @@ textarea#msgInput::placeholder { color: var(--t4); }
   border: 1px solid rgba(113,112,255,0.18);
   border-radius: 8px;
   background: rgba(94,106,210,0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.tm-status-card:hover { background: rgba(94,106,210,0.09); }
+
+/* ── Floating Teammate Bar (above input box) ── */
+#tmFloat { margin-bottom: 8px; }
+.tm-float-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(94,106,210,0.08);
+  border: 1px solid rgba(113,112,255,0.22);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.tm-float-bar:hover { background: rgba(94,106,210,0.13); }
+.tm-float-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent);
+  box-shadow: 0 0 5px rgba(113,112,255,0.5);
+  animation: pulse 1.2s ease infinite;
+}
+.tm-float-text {
+  font-size: 12px; font-weight: 510; color: var(--accent);
+  font-feature-settings: var(--feat); flex: 1;
 }
 .tm-dot {
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
@@ -690,22 +721,34 @@ textarea#msgInput::placeholder { color: var(--t4); }
 .tm-btn:hover { background: var(--brand-tint); }
 .tm-btn.visible { display: block; }
 
-/* ── Compact Card (slim) ── */
+/* ── Compact Card ── */
 .compact-card {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-  padding: 7px 10px;
+  margin: 6px 0;
+  padding: 10px 12px;
   border: 1px solid rgba(94,106,210,0.25);
   border-radius: 8px;
   background: rgba(94,106,210,0.06);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.compact-card:hover { background: rgba(94,106,210,0.10); }
+.compact-card-header {
+  display: flex; align-items: center; gap: 8px;
 }
 .compact-icon { width: 14px; height: 14px; flex-shrink: 0; color: var(--brand); }
-.compact-title { font-size: 12px; font-weight: 590; color: var(--brand); font-feature-settings: var(--feat); letter-spacing: -0.12px; flex-shrink: 0; }
-.compact-preview { font-size: 11px; color: var(--t4); font-family: var(--mono); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-title { font-size: 12px; font-weight: 590; color: var(--brand); font-feature-settings: var(--feat); letter-spacing: -0.12px; flex: 1; }
+.compact-count { font-size: 11px; color: var(--t4); font-family: var(--mono); flex-shrink: 0; }
+.compact-summary-text {
+  font-size: 12px; color: var(--t3); line-height: 1.65; margin-top: 7px;
+  padding-left: 22px;
+  white-space: pre-wrap; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.compact-footer {
+  display: flex; justify-content: flex-end; margin-top: 8px;
+}
 .compact-btn {
-  flex-shrink: 0;
   font-size: 11px; font-weight: 510; font-feature-settings: var(--feat);
   color: var(--brand); background: none; border: none; cursor: pointer;
   padding: 2px 6px; border-radius: 4px;
@@ -760,6 +803,10 @@ textarea#msgInput::placeholder { color: var(--t4); }
 }
 .drawer-content::-webkit-scrollbar { width: 4px; }
 .drawer-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+/* Allow full-width conversation styles inside the drawer */
+.drawer-content .user-bubble { max-width: 85%; }
+.drawer-content .ai-text { font-size: 13px; }
+.drawer-content .tool-code { font-size: 11px; }
 
 /* ── Mini message list (inside drawer) ── */
 .mini-user { display: flex; justify-content: flex-end; margin-bottom: 8px; }
@@ -881,6 +928,7 @@ textarea#msgInput::placeholder { color: var(--t4); }
       <div class="conn-status">
         <span class="conn-text" id="connSubText"></span>
       </div>
+      <div id="tmFloat" style="display:none"></div>
       <div class="input-box">
         <div class="input-row">
           <textarea id="msgInput" placeholder="发消息给 Agent…" rows="1"></textarea>
@@ -933,13 +981,28 @@ function thinkHeaderHtml(label) {
   <div class="think-body"></div>`;
 }
 
+/* ── Premium avatar SVG (sparkle/diamond) ── */
+const avatarSvg = `<svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M7 1L8.4 5.6L13 7L8.4 8.4L7 13L5.6 8.4L1 7L5.6 5.6Z" fill="rgba(255,255,255,0.95)" stroke="rgba(255,255,255,0.3)" stroke-width="0.5" stroke-linejoin="round"/>
+</svg>`;
+
 /* ── State ── */
 let sessionId = null;
 let streaming  = false;
 let retries    = 0;
 const MAX_RETRY = 3;
 
+/* ── Compact card state (single card at top, multi-tab drawer) ── */
+let compactSessions = [];  // [{summary, transcriptFile}, ...]
+let compactCard     = null; // single DOM element
+
+/* ── Floating teammate state ── */
+let tmFloatAgents        = {};   // agentId → {toolCount, lastStatus}
+let tmCompletedAgents    = {};   // agentId → {toolCount}
+let hasAutoOpenedDrawer  = false;
+
 /* ── DOM refs ── */
+const tmFloat      = document.getElementById('tmFloat');
 const msgWrap      = document.getElementById('msgWrap');
 const messages     = document.getElementById('messages');
 const msgInput     = document.getElementById('msgInput');
@@ -1001,21 +1064,17 @@ function appendUserBubble(text) {
   scrollBottom();
 }
 
-/* ── Append AI row, returns ai-body div ── */
+/* ── Append AI row, returns ai-body div (no avatar — avatar only on text replies) ── */
 function appendAiRow() {
   hideEmpty();
   const row = document.createElement('div');
   row.className = 'msg-ai';
-  row.innerHTML = `
-    <div class="ai-avatar">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8 2l1.8 3.6L14 6.5l-3 2.9.7 4.1L8 11.5l-3.7 1.9.7-4.1L2 6.5l4.2-.9z"/>
-      </svg>
-    </div>
-    <div class="ai-body"></div>`;
+  const body = document.createElement('div');
+  body.className = 'ai-body';
+  row.appendChild(body);
   msgWrap.appendChild(row);
   scrollBottom();
-  return row.querySelector('.ai-body');
+  return body;
 }
 
 /* ── Teammate Status Card (slim) ── */
@@ -1027,13 +1086,13 @@ function ensureTeammateStatusCard(agentId) {
   const card = document.createElement('div');
   card.className = 'tm-status-card';
   card.dataset.agentId = agentId;
+  card.onclick = () => openDrawer('teammate', { agentId: agentId, sessionId: currentTeammateSessions[agentId] });
   card.innerHTML = `
     <div class="tm-dot"></div>
     <span class="tm-name">${escHtml(agentId)}</span>
     <span class="tm-status"> · 正在工作...</span>
     <span class="tm-count"></span>
-    <button class="tm-btn" onclick="openDrawer('teammate',{agentId:'${escHtml(agentId)}',sessionId:currentTeammateSessions['${escHtml(agentId)}']})">查看工作区 →</button>`;
-  // Append directly to msgWrap so the card is always visible as a top-level row
+    <button class="tm-btn" onclick="event.stopPropagation();openDrawer('teammate',{agentId:'${escHtml(agentId)}',sessionId:currentTeammateSessions['${escHtml(agentId)}']})">查看工作区 →</button>`;
   hideEmpty();
   msgWrap.appendChild(card);
   scrollBottom();
@@ -1065,23 +1124,89 @@ function finishTeammateCard(agentId) {
 // tracks agentId → teammate sessionId (set when team_done fires)
 const currentTeammateSessions = {};
 
-/* ── Compact Card (slim) ── */
-function createCompactCard(summary, transcriptFile) {
+/* ── Compact Card (single card at top, multi-tab drawer) ── */
+function recordCompact(summary, transcriptFile) {
+  compactSessions.push({ summary, transcriptFile });
   hideEmpty();
-  const preview = (summary || 'Context compressed.').slice(0, 30) + '...';
-  const card = document.createElement('div');
-  card.className = 'compact-card';
-  card.innerHTML = `
-    <svg class="compact-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 4h12M4 8h8M6 12h4"/>
-    </svg>
-    <span class="compact-title">Context Compressed</span>
-    <span class="compact-preview">${escHtml(preview)}</span>
-    <button class="compact-btn">查看完整历史 →</button>`;
-  const btn = card.querySelector('.compact-btn');
-  btn.onclick = () => openDrawer('transcript', { transcriptFile, summary });
-  msgWrap.appendChild(card);
-  scrollBottom();
+  if (!compactCard) {
+    compactCard = document.createElement('div');
+    compactCard.className = 'compact-card';
+    compactCard.onclick = () => openDrawer('compact', {});
+    // Insert at the very top of msgWrap
+    msgWrap.insertBefore(compactCard, msgWrap.firstChild);
+  }
+  const count = compactSessions.length;
+  const shortSummary = (summary || '').slice(0, 200);
+  const hasMore = shortSummary.length < (summary || '').length;
+  compactCard.innerHTML = `
+    <div class="compact-card-header">
+      <svg class="compact-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 4h12M4 8h8M6 12h4"/>
+      </svg>
+      <span class="compact-title">Context Compressed</span>
+      ${count > 1 ? `<span class="compact-count">${count}次</span>` : ''}
+    </div>
+    ${shortSummary ? `<div class="compact-summary-text">${escHtml(shortSummary)}${hasMore ? '...' : ''}</div>` : ''}
+    <div class="compact-footer">
+      <button class="compact-btn" onclick="event.stopPropagation();openDrawer('compact',{})">查看完整历史 →</button>
+    </div>`;
+}
+
+async function renderCompactDrawer() {
+  drawerTitle.textContent = '压缩历史';
+  drawerTabs.innerHTML = '';
+  for (let i = 0; i < compactSessions.length; i++) {
+    const tab = document.createElement('button');
+    tab.className = 'drawer-tab' + (i === compactSessions.length - 1 ? ' active' : '');
+    tab.textContent = `第${i + 1}次压缩`;
+    const idx = i;
+    tab.onclick = () => {
+      drawerTabs.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      loadCompactTabContent(compactSessions[idx]);
+    };
+    drawerTabs.appendChild(tab);
+  }
+  if (compactSessions.length > 0) {
+    await loadCompactTabContent(compactSessions[compactSessions.length - 1]);
+  } else {
+    drawerContent.innerHTML = '<div style="color:var(--t4);font-size:12px">暂无压缩历史</div>';
+  }
+}
+
+async function loadCompactTabContent({ summary, transcriptFile }) {
+  drawerContent.innerHTML = '';
+  if (summary) {
+    const summaryEl = document.createElement('div');
+    summaryEl.className = 'ai-text';
+    summaryEl.style.cssText = 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--b-sub);';
+    summaryEl.innerHTML = renderMarkdown(summary);
+    drawerContent.appendChild(summaryEl);
+  }
+  if (!transcriptFile) {
+    const el = document.createElement('div');
+    el.style.cssText = 'color:var(--t4);font-size:12px;';
+    el.textContent = '无压缩前历史记录';
+    drawerContent.appendChild(el);
+    return;
+  }
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'font-size:11px;font-weight:510;color:var(--t4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;';
+  hdr.textContent = '压缩前对话记录';
+  drawerContent.appendChild(hdr);
+  try {
+    const res = await fetch(`/api/transcripts/${encodeURIComponent(transcriptFile)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const msgs = await res.json();
+    const mini = document.createElement('div');
+    renderMiniMessages(mini, msgs);
+    drawerContent.appendChild(mini);
+  } catch(e) {
+    const errEl = document.createElement('div');
+    errEl.style.cssText = 'color:var(--err);font-size:12px;';
+    errEl.textContent = `加载失败: ${e.message}`;
+    drawerContent.appendChild(errEl);
+  }
 }
 
 /* ── Workspace Drawer ── */
@@ -1097,6 +1222,7 @@ function openDrawer(type, data) {
   drawerState = { type, data };
   if (type === 'transcript') renderTranscriptDrawer(data);
   if (type === 'teammate')   renderTeammateDrawer(data);
+  if (type === 'compact')    renderCompactDrawer();
   drawer.classList.add('open');
   layout.style.marginRight = '440px';
 }
@@ -1112,7 +1238,10 @@ async function renderTranscriptDrawer({ transcriptFile, summary }) {
   drawerTabs.innerHTML = '';
   drawerContent.innerHTML = '<div style="color:var(--t4);font-size:12px">加载中...</div>';
   if (!transcriptFile) {
-    drawerContent.innerHTML = `<div style="color:var(--t4);font-size:12px;white-space:pre-wrap">${escHtml(summary || '暂无详情')}</div>`;
+    const el = document.createElement('div');
+    el.className = 'ai-text';
+    el.innerHTML = renderMarkdown(summary || '暂无详情');
+    drawerContent.appendChild(el);
     return;
   }
   try {
@@ -1162,68 +1291,180 @@ async function loadTeammateContent(agentId, tmSessionId) {
   }
 }
 
+/**
+ * Render messages in the workspace drawer using the SAME styles as the main conversation:
+ * .msg-user/.user-bubble, .msg-ai/.ai-body/.ai-reply-row/.ai-avatar/.ai-text,
+ * .tool-block, .think-block — so the drawer looks identical to the main flow.
+ */
 function renderMiniMessages(container, msgs) {
   container.innerHTML = '';
-  // Build tool_call_id → result map for input/output display
+  // Build tool_call_id → result content for O(1) lookup
   const toolResultMap = {};
   for (const msg of msgs) {
     if (msg.role === 'tool' && msg.tool_call_id) {
       toolResultMap[msg.tool_call_id] = msg._display_content || msg.content || '';
     }
   }
+
+  let skipNextAssistantAck = false; // skip identity ack ("I am ...") after <identity> user msg
   for (const msg of msgs) {
-    if (msg.role === 'tool') continue; // rendered via assistant tool_calls below
-    if (msg.role === 'user' && typeof msg.content === 'string' && msg.content.includes('<system-reminder>')) continue;
-    if (msg.role === 'user' && typeof msg.content === 'string' && msg.content.startsWith('[Context was compacted.')) {
-      const el = document.createElement('div');
-      el.style.cssText = 'font-size:11px;color:var(--brand);padding:6px 0;font-style:italic;';
-      el.textContent = '[Context compressed here]';
-      container.appendChild(el);
+    if (msg.role === 'tool') continue;
+    if (msg.role === 'user' && typeof msg.content === 'string'
+        && msg.content.includes('<system-reminder>')) continue;
+    // Skip identity injection user message AND its paired assistant ack
+    if (msg.role === 'user' && typeof msg.content === 'string'
+        && msg.content.includes('<identity>')) {
+      skipNextAssistantAck = true;
       continue;
     }
-    if (msg.role === 'user' && typeof msg.content === 'string') {
-      const div = document.createElement('div');
-      div.className = 'mini-user';
-      div.innerHTML = `<div class="mini-user-bubble">${escHtml(msg.content)}</div>`;
-      container.appendChild(div);
+    if (msg.role === 'assistant' && skipNextAssistantAck) {
+      skipNextAssistantAck = false;
+      continue;
+    }
+    skipNextAssistantAck = false;
+
+    // Compact summary marker
+    if (msg.role === 'user' && typeof msg.content === 'string'
+        && msg.content.startsWith('[Context was compacted.')) {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'font-size:11px;color:var(--brand);padding:8px 0 4px;font-style:italic;border-top:1px solid var(--b-sub);margin-top:6px;';
+      sep.textContent = '── Context compressed ──';
+      container.appendChild(sep);
+      continue;
+    }
+
+    // User bubble (same style as main flow)
+    // Show message-bus injections as a slim separator, not as a user bubble
+    if (msg.role === 'user' && typeof msg.content === 'string'
+        && msg.content.startsWith('<message from=')) {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'font-size:11px;color:var(--t4);padding:4px 0;font-style:italic;';
+      // Extract from= attribute and content
+      const fromMatch = msg.content.match(/from="([^"]+)"/);
+      const innerMatch = msg.content.match(/>([^<]*)</);
+      const fromLabel = fromMatch ? fromMatch[1] : '?';
+      const innerText = innerMatch ? innerMatch[1].trim() : msg.content;
+      sep.textContent = `↳ 来自 ${fromLabel}: ${innerText.slice(0, 80)}${innerText.length > 80 ? '…' : ''}`;
+      container.appendChild(sep);
+    } else if (msg.role === 'user' && typeof msg.content === 'string') {
+      const row = document.createElement('div');
+      row.className = 'msg-user';
+      row.style.marginBottom = '12px';
+      const bubble = document.createElement('div');
+      bubble.className = 'user-bubble';
+      bubble.textContent = msg.content;
+      row.appendChild(bubble);
+      container.appendChild(row);
+
     } else if (msg.role === 'assistant') {
-      const text = typeof msg.content === 'string' ? msg.content : '';
+      const text      = typeof msg.content === 'string' ? msg.content : '';
+      const reasoning = typeof msg._reasoning === 'string' ? msg._reasoning : '';
+      const interleaved = typeof msg._content === 'string' ? msg._content : '';
       const toolCalls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
-      if (!text && toolCalls.length === 0) continue;
-      const div = document.createElement('div');
-      div.className = 'mini-ai';
+      if (!text && !reasoning && !interleaved && toolCalls.length === 0) continue;
+
+      // AI row: same structure as main conversation
+      const row = document.createElement('div');
+      row.className = 'msg-ai';
+      row.style.marginBottom = '12px';
+      const body = document.createElement('div');
+      body.className = 'ai-body';
+      row.appendChild(body);
+      container.appendChild(row);
+
+      // Think block (if reasoning exists)
+      if (reasoning) {
+        const durationMs = typeof msg._reasoning_ms === 'number' ? msg._reasoning_ms : 0;
+        const label = durationMs > 0 ? `已思考 ${(durationMs/1000).toFixed(1)}s` : '已思考';
+        const tb = document.createElement('div');
+        tb.className = 'think-block';
+        tb.innerHTML = thinkHeaderHtml(label);
+        tb.querySelector('.think-body').textContent = reasoning;
+        body.appendChild(tb);
+      }
+
+      // Interleaved text (text before tool calls)
+      if (interleaved) {
+        const replyRow = document.createElement('div');
+        replyRow.className = 'ai-reply-row';
+        const av = document.createElement('div');
+        av.className = 'ai-avatar';
+        av.innerHTML = avatarSvg;
+        const el = document.createElement('div');
+        el.className = 'ai-text';
+        el.innerHTML = renderMarkdown(interleaved);
+        replyRow.appendChild(av);
+        replyRow.appendChild(el);
+        body.appendChild(replyRow);
+      }
+
+      // Tool call blocks
       for (const tc of toolCalls) {
-        const name = tc.function && tc.function.name ? tc.function.name : '?';
+        const name = tc.function && tc.function.name ? tc.function.name : '(unknown)';
         let args = {};
         try { args = JSON.parse((tc.function && tc.function.arguments) || '{}'); } catch(e) {}
         const result = toolResultMap[tc.id] || '';
+
         const block = document.createElement('div');
-        block.className = 'mini-tool-block';
+        block.className = 'tool-block done';
         block.innerHTML = `
-          <div class="mini-tool-header" onclick="this.parentElement.classList.toggle('open')">
-            <span class="mini-tool-dot"></span>
-            <span class="mini-tool-fn">${escHtml(name)}</span>
-            <span class="mini-tool-toggle">▾</span>
+          <div class="tool-header" onclick="this.parentElement.classList.toggle('open')">
+            <div class="tool-dot done"></div>
+            <span class="tool-fn">${escHtml(name)}</span>
+            <span class="tool-status"> · 完成</span>
+            <span class="tool-toggle"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg></span>
           </div>
-          <div class="mini-tool-body">
-            <div class="mini-tool-label">Input</div>
-            <div class="mini-tool-code">${escHtml(JSON.stringify(args, null, 2))}</div>
-            ${result ? `<div class="mini-tool-label out">Output</div><div class="mini-tool-code">${escHtml(result.slice(0, 3000))}${result.length > 3000 ? '\n…(truncated)' : ''}</div>` : ''}
+          <div class="tool-body">
+            <div class="tool-label in">Input</div>
+            <div class="tool-code">${escHtml(JSON.stringify(args, null, 2))}</div>
+            ${result ? `<div class="tool-label out">Output</div><div class="tool-code">${escHtml(result.slice(0, 3000))}${result.length > 3000 ? '\n…(truncated)' : ''}</div>` : ''}
           </div>`;
-        div.appendChild(block);
+        body.appendChild(block);
       }
+
+      // Text reply (with avatar, same as main flow)
       if (text) {
+        const replyRow = document.createElement('div');
+        replyRow.className = 'ai-reply-row';
+        const av = document.createElement('div');
+        av.className = 'ai-avatar';
+        av.innerHTML = avatarSvg;
         const el = document.createElement('div');
-        el.className = 'mini-ai-text';
-        el.textContent = text;
-        div.appendChild(el);
+        el.className = 'ai-text';
+        el.innerHTML = renderMarkdown(text);
+        replyRow.appendChild(av);
+        replyRow.appendChild(el);
+        body.appendChild(replyRow);
       }
-      container.appendChild(div);
     }
   }
+
   if (container.children.length === 0) {
-    container.innerHTML = '<div style="color:var(--t4);font-size:12px">暂无内容</div>';
+    container.innerHTML = '<div style="color:var(--t4);font-size:13px;padding:8px 0">暂无内容</div>';
   }
+}
+
+/* ── Floating Teammate Bar ── */
+function updateTmFloat() {
+  const activeIds = Object.keys(tmFloatAgents);
+  if (activeIds.length === 0) {
+    tmFloat.style.display = 'none';
+    tmFloat.innerHTML = '';
+    return;
+  }
+  const firstId = activeIds[0];
+  const info = tmFloatAgents[firstId];
+  const label = activeIds.length > 1
+    ? `${activeIds.length} agents 正在工作...`
+    : `${escHtml(firstId)} · ${escHtml(info.lastStatus || '正在工作...')}`;
+  const agId = escHtml(firstId);
+  tmFloat.style.display = '';
+  tmFloat.innerHTML = `<div class="tm-float-bar"
+      onclick="openDrawer('teammate',{agentId:'${agId}',sessionId:currentTeammateSessions['${agId}']})">
+    <span class="tm-float-dot"></span>
+    <span class="tm-float-text">${label}</span>
+    <button class="compact-btn" onclick="event.stopPropagation();openDrawer('teammate',{agentId:'${agId}',sessionId:currentTeammateSessions['${agId}']})">工作空间 →</button>
+  </div>`;
 }
 
 /* ── Think block ── */
@@ -1313,6 +1554,11 @@ async function sendMessage() {
   // Clear teammate/workspace state for new round
   Object.keys(teammateMap).forEach(k => delete teammateMap[k]);
   Object.keys(currentTeammateSessions).forEach(k => delete currentTeammateSessions[k]);
+  tmFloatAgents = {};
+  tmCompletedAgents = {};
+  hasAutoOpenedDrawer = false;
+  tmFloat.style.display = 'none';
+  tmFloat.innerHTML = '';
 
   appendUserBubble(text);
   const aiBody = appendAiRow();
@@ -1328,12 +1574,20 @@ async function sendMessage() {
   function getOrCreateTextEl() {
     if (!textEl || needNewTextEl) {
       needNewTextEl = false;
+      // Wrap text in .ai-reply-row with avatar (avatar only appears with text replies)
+      const replyRow = document.createElement('div');
+      replyRow.className = 'ai-reply-row';
+      const av = document.createElement('div');
+      av.className = 'ai-avatar';
+      av.innerHTML = avatarSvg;
       textEl = document.createElement('div');
       textEl.className = 'ai-text';
       cursor = document.createElement('span');
       cursor.className = 'cursor';
       textEl.appendChild(cursor);
-      aiBody.appendChild(textEl);
+      replyRow.appendChild(av);
+      replyRow.appendChild(textEl);
+      aiBody.appendChild(replyRow);
       textEls.push(textEl);
     }
     return { textEl, cursor };
@@ -1450,10 +1704,26 @@ async function sendMessage() {
       case 'done':
         if (payload && payload.usage) updateTokenMeter(payload.usage);
         if (cursor) { cursor.remove(); cursor = null; }
-        // Re-render ALL accumulated text segments as markdown (there may be multiple textEls
-        // when tool calls split the reply into interleaved text + final reply).
+        // Re-render ALL accumulated text segments as markdown
         for (const el of textEls) {
           if (el._rawText) el.innerHTML = renderMarkdown(el._rawText);
+        }
+        // Hide float card; add summary cards for ALL teammates
+        // (merge completed + any still in tmFloatAgents if team_done was missed due to race)
+        tmFloat.style.display = 'none';
+        tmFloat.innerHTML = '';
+        const allDone = Object.assign({}, tmCompletedAgents);
+        for (const agId of Object.keys(tmFloatAgents)) {
+          if (!allDone[agId]) allDone[agId] = { toolCount: tmFloatAgents[agId].toolCount };
+          if (sessionId) currentTeammateSessions[agId] = sessionId + '-tm-' + agId;
+        }
+        for (const agId of Object.keys(allDone)) {
+          const info = allDone[agId];
+          const tm = ensureTeammateStatusCard(agId);
+          tm.dotEl.className = 'tm-dot done';
+          tm.statusEl.textContent = ' · 完成';
+          tm.countEl.textContent = info.toolCount > 0 ? `（${info.toolCount} 个工具）` : '';
+          tm.btnEl.classList.add('visible');
         }
         loadSessionList();
         break;
@@ -1466,35 +1736,64 @@ async function sendMessage() {
 
       // ── Teammate status events ──
       case 'team_tool_start': {
-        const tm = ensureTeammateStatusCard(payload.agentId);
-        tm.toolCount++;
-        tm.statusEl.textContent = ` · 执行 ${escHtml(payload.name || '...')}`;
+        const agId = payload.agentId;
+        // Compute teammate sessionId immediately (don't wait for team_done)
+        if (sessionId && !currentTeammateSessions[agId]) {
+          currentTeammateSessions[agId] = sessionId + '-tm-' + agId;
+        }
+        if (!tmFloatAgents[agId]) {
+          tmFloatAgents[agId] = { toolCount: 0, lastStatus: '正在工作...' };
+        }
+        tmFloatAgents[agId].toolCount++;
+        tmFloatAgents[agId].lastStatus = `执行 ${payload.name || '...'}`;
+        updateTmFloat();
+        // Auto-open drawer once on first teammate tool
+        if (!hasAutoOpenedDrawer) {
+          hasAutoOpenedDrawer = true;
+          openDrawer('teammate', { agentId: agId, sessionId: currentTeammateSessions[agId] });
+        }
         break;
       }
 
       case 'team_tool_end': {
-        const tm = teammateMap[payload.agentId];
-        if (tm) tm.statusEl.textContent = ` · 已完成 ${tm.toolCount} 个工具`;
+        const agId = payload.agentId;
+        if (tmFloatAgents[agId]) {
+          tmFloatAgents[agId].lastStatus = `已完成 ${tmFloatAgents[agId].toolCount} 个工具`;
+          updateTmFloat();
+        }
+        // Refresh drawer — session was just saved after this tool call
+        if (drawerState && drawerState.type === 'teammate') {
+          loadTeammateContent(agId, currentTeammateSessions[agId]);
+        }
         break;
       }
 
       case 'team_text': {
-        const tm = teammateMap[payload.agentId];
-        if (tm) tm.statusEl.textContent = ' · 正在输出...';
+        const agId = payload.agentId;
+        if (tmFloatAgents[agId]) {
+          tmFloatAgents[agId].lastStatus = '正在输出...';
+          updateTmFloat();
+        }
         break;
       }
 
       case 'team_done': {
         const agId = payload.agentId;
-        // Build teammate sessionId = current sessionId + "-tm-" + agentId
         if (sessionId) currentTeammateSessions[agId] = sessionId + '-tm-' + agId;
-        finishTeammateCard(agId);
+        const info = tmFloatAgents[agId] || { toolCount: 0 };
+        tmCompletedAgents[agId] = { toolCount: info.toolCount };
+        delete tmFloatAgents[agId];
+        updateTmFloat();
+        // Refresh drawer with final data
+        if (drawerState && drawerState.type === 'teammate') {
+          loadTeammateContent(agId, currentTeammateSessions[agId]);
+        }
         break;
       }
 
       // ── Compact card ──
       case 'compact_done':
-        createCompactCard(payload.summary || '', payload.transcriptFile || null);
+        recordCompact(payload.summary || '', payload.transcriptFile || null);
         break;
     }
   }
@@ -1547,6 +1846,14 @@ async function switchSession(id) {
   if (streaming) return;
   sessionId = id;
   msgWrap.innerHTML = '';
+  // Reset compact & float state for new session view
+  compactSessions = [];
+  compactCard = null;
+  tmFloatAgents = {};
+  tmCompletedAgents = {};
+  hasAutoOpenedDrawer = false;
+  tmFloat.style.display = 'none';
+  tmFloat.innerHTML = '';
   setStatus('', '加载历史...');
   try {
     const res = await fetch(`/api/sessions/${id}/messages`);
@@ -1570,7 +1877,7 @@ async function switchSession(id) {
           && msg.content.includes('<system-reminder>')) continue;
       // Compact tool result: show as Compact Card (legacy: tool message with _compact_summary)
       if (msg.role === 'tool' && typeof msg._compact_summary === 'string') {
-        createCompactCard(msg._compact_summary, null);
+        recordCompact(msg._compact_summary, null);
         visibleCount++;
         continue;
       }
@@ -1584,7 +1891,7 @@ async function switchSession(id) {
         // Extract summary text between the markers
         const summaryMatch = msg.content.match(/\[Context was compacted\. Previous conversation summary:\]\n([\s\S]*?)\n\n\[Continue/);
         const summary = summaryMatch ? summaryMatch[1] : '';
-        createCompactCard(summary, transcriptFile);
+        recordCompact(summary, transcriptFile);
         skipNextAssistantAck = true; // next assistant message is the "Understood" ack
         visibleCount++;
         continue;
@@ -1667,12 +1974,19 @@ async function switchSession(id) {
           aiBody.appendChild(block);
         }
 
-        // Text reply (rendered as markdown)
+        // Text reply (rendered as markdown, wrapped with avatar)
         if (content) {
+          const replyRow = document.createElement('div');
+          replyRow.className = 'ai-reply-row';
+          const av = document.createElement('div');
+          av.className = 'ai-avatar';
+          av.innerHTML = avatarSvg;
           const el = document.createElement('div');
           el.className = 'ai-text';
           el.innerHTML = renderMarkdown(content);
-          aiBody.appendChild(el);
+          replyRow.appendChild(av);
+          replyRow.appendChild(el);
+          aiBody.appendChild(replyRow);
         }
       }
     }
@@ -1726,6 +2040,13 @@ function newConversation() {
   setStatus('', '');
   Object.keys(currentTeammateSessions).forEach(k => delete currentTeammateSessions[k]);
   Object.keys(teammateMap).forEach(k => delete teammateMap[k]);
+  compactSessions = [];
+  compactCard = null;
+  tmFloatAgents = {};
+  tmCompletedAgents = {};
+  hasAutoOpenedDrawer = false;
+  tmFloat.style.display = 'none';
+  tmFloat.innerHTML = '';
   closeDrawer();
   document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
   msgInput.focus();

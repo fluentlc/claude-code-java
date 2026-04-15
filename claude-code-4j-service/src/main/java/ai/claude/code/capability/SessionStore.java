@@ -98,7 +98,8 @@ public class SessionStore {
      */
     public java.util.List<SessionMeta> listAll() {
         File dir = new File(sessionsDir);
-        File[] files = dir.listFiles((d, name) -> name.endsWith(".json"));
+        // Exclude teammate sessions (naming: {leadId}-tm-{name}.json)
+        File[] files = dir.listFiles((d, name) -> name.endsWith(".json") && !name.contains("-tm-"));
         if (files == null) return java.util.Collections.emptyList();
 
         java.util.List<SessionMeta> result = new java.util.ArrayList<>();

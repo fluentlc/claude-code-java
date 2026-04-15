@@ -5,6 +5,99 @@ Each version corresponds to one conversation iteration.
 
 ---
 
+## v0.12 — 2026-04-15
+
+### 需求
+> 1. 左侧对话历史展示了 teammate session，应只展示 lead session
+> 2. 工作空间中 teammate 对话渲染顺序错误：assistant 消息先于 user 消息显示
+> 3. Context Compressed 和工作空间的 summary 没有渲染 markdown 格式
+
+### 根因
+1. `SessionStore.listAll()` 未过滤 `-tm-` 文件名，teammate session 混入列表
+2. `TeammateLoop.reinjectIdentityIfNeeded()` 写入 user `<identity>` + assistant "I am..." 配对；`renderMiniMessages` 只跳过了 user 那条，assistant ack 成了第一条可见消息
+3. `loadCompactTabContent` 用 `textContent` 赋值 summary，未走 markdown 渲染
+
+### 变更
+
+#### `SessionStore.java`（service 模块）
+- `listAll()`：文件过滤条件加 `&& !name.contains("-tm-")`，teammate session 不再出现在侧边栏
+
+#### `index.html` JS
+- `renderMiniMessages()`：新增 `skipNextAssistantAck` flag；遇到 `<identity>` user 消息时设为 true，下一条 assistant 消息一并跳过，彻底过滤 identity 注入配对
+- `renderMiniMessages()`：`<message from="...">` 格式的消息总线注入消息改为渲染成单行斜体提示（`↳ 来自 xxx: ...`），不作普通 user bubble
+- `loadCompactTabContent()`：summary 改用 `summaryEl.className = 'ai-text'` + `innerHTML = renderMarkdown(summary)`，支持完整 markdown 样式（标题、列表、代码块等）
+- `renderTranscriptDrawer()`：无 transcriptFile 时的 fallback 也改用 `renderMarkdown` + `.ai-text` 类
+
+---
+
+## v0.11 — 2026-04-15
+
+### 需求
+> 1. 对话过程中工作空间没有数据（session 已有数据但看不到）；工作空间渲染风格应与对话流一致（卡片、头像、颜色等）
+> 2. 对话结束后 teammate 悬浮卡消失了，但摘要卡没有放到对话流末尾；只有点击左侧历史才能看到
+
+### 根因
+1. `saveSession()` 仅在每个 LLM 轮结束后调用，第一个工具调用执行期间无 session 数据；`currentTeammateSessions[agId]` 在 `team_tool_start` 时为 null，导致抽屉无法加载
+2. `team_done` SSE 事件存在竞态：lead `done` 后 `setMainListener(null)` 执行，TeammateLoop 之后触发的 `updateStatus("done")` 找不到 listener；前端 `done` 处理仅遍历 `tmCompletedAgents`，但 `team_done` 丢失时该 map 为空
+
+### 变更
+
+#### `TeammateLoop.java`（service 模块）
+- `runWorkingSession()`：每次工具调用完成后（`messages.add(toolResultMessage)` 后）立即调用 `saveSession(messages)`，实现增量持久化，抽屉可实时加载最新数据
+
+#### `index.html` JS
+- `team_tool_start` 事件：在首次触发时立即计算并设置 `currentTeammateSessions[agId] = sessionId + '-tm-' + agId`，不再等到 `team_done`
+- `team_tool_end` 事件：每次工具结束后调用 `loadTeammateContent()` 刷新抽屉（因为 session 已写入）
+- `done` 事件：兜底处理——合并 `tmCompletedAgents` 和仍在 `tmFloatAgents` 中的 agent（应对 `team_done` 丢失的场景），为全部 agent 创建摘要卡并追加到对话流末尾
+- `renderMiniMessages()`：完整重写，改用与主对话流完全一致的 CSS 类：`.msg-user`/`.user-bubble`（用户消息）、`.msg-ai`/`.ai-body`/`.ai-reply-row`/`.ai-avatar`/`.ai-text`（AI 回复带头像和 markdown）、`.tool-block`/`.think-block`（工具和思考卡片，同款折叠样式）
+- `.drawer-content` 新增 CSS：覆盖 `.user-bubble` max-width 和字号，适配 440px 抽屉宽度
+
+---
+
+## v0.10 — 2026-04-15
+
+### 需求
+> 1. Context Compressed 卡片高度不足，看不到 summary 内容；
+> 2. 模型头像要换高级一点的，且只有文字答复时才显示头像（工具/思考卡片不显示）；
+> 3. team 子 agent 卡片可点击，首次 team 工具调用自动弹出工作空间抽屉；
+> 4. 压缩卡片应在对话流顶部，多次压缩只保留一个卡片，抽屉中用 Tab 区分各次压缩；
+> 5. Teammate 工作时，输入框上方悬浮状态卡片，自动打开工作空间；对话结束后悬浮卡消失，摘要卡进入对话流
+
+### 变更
+
+#### `index.html` CSS
+- `.msg-ai`：去掉 flex 布局（头像不再固定在行首）；新增 `.ai-reply-row`（flex + gap，包裹头像 + 文字）
+- `.ai-avatar`：改为渐变背景 + 内阴影，呈现更高级的视觉效果；内部改用 sparkle 四角星 SVG
+- `.compact-card`：重设计为块级布局——`.compact-card-header`（图标+标题+次数）+ `.compact-summary-text`（最多 4 行摘要）+ `.compact-footer`（"查看完整历史"按钮）；增加 hover 效果
+- `.tm-status-card`：增加 `cursor:pointer` + hover 背景
+- 新增 `#tmFloat` + `.tm-float-bar` + `.tm-float-dot` + `.tm-float-text`：输入框上方的悬浮 Teammate 状态条样式
+
+#### `index.html` HTML
+- `.input-wrap` 里 `.input-box` 前新增 `<div id="tmFloat" style="display:none">`
+
+#### `index.html` JS
+- 新增 `avatarSvg` 常量（四角星/sparkle SVG，premium 风格）
+- `appendAiRow()`：不再内嵌头像 HTML，返回纯 `ai-body` div
+- `getOrCreateTextEl()`（sendMessage 内）：创建文字元素时，用 `.ai-reply-row` 包裹头像 + `.ai-text`，确保只有文字回复带头像
+- `switchSession()` 文字回复渲染：同样用 `.ai-reply-row` 包裹
+- 新增 `compactSessions = []`、`compactCard = null` 全局状态
+- `createCompactCard` → 替换为 `recordCompact(summary, transcriptFile)`：卡片 `insertBefore` 到 msgWrap 顶部，多次压缩更新同一张卡片并 push 到 `compactSessions`
+- 新增 `renderCompactDrawer()`：抽屉标题"压缩历史"，Tabs 对应各次压缩
+- 新增 `loadCompactTabContent({summary, transcriptFile})`：显示摘要 + 异步加载 transcript 历史
+- `openDrawer()`：新增 `'compact'` 类型分支
+- `ensureTeammateStatusCard()`：整张卡 `onclick` 打开抽屉（不只是按钮）；按钮点击 `stopPropagation`
+- 新增 `tmFloatAgents`、`tmCompletedAgents`、`hasAutoOpenedDrawer` 状态
+- 新增 `updateTmFloat()`：根据 `tmFloatAgents` 更新/隐藏悬浮条
+- `team_tool_start` 事件：更新 float bar，首次触发时 `hasAutoOpenedDrawer=true` + `openDrawer`
+- `team_tool_end` 事件：更新 float bar，刷新抽屉内容
+- `team_text` 事件：更新 float bar 状态文字
+- `team_done` 事件：将 agent 移至 `tmCompletedAgents`，隐藏 float bar；若抽屉已打开则刷新内容
+- `done` 事件：隐藏 float bar，为 `tmCompletedAgents` 中的每个 agent 调用 `ensureTeammateStatusCard` 创建对话流摘要卡
+- `sendMessage()` 重置：清空 float 状态、隐藏 `#tmFloat`
+- `switchSession()` / `newConversation()`：重置 `compactSessions`、`compactCard`、float 状态
+
+---
+
 ## v0.9 — 2026-04-15
 
 ### 需求

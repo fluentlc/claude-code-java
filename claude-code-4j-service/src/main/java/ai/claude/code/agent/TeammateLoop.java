@@ -212,6 +212,8 @@ public class TeammateLoop implements Runnable {
                 runner.notifyTeamToolEnd(name, toolId, success, result);
 
                 messages.add(OpenAiClient.toolResultMessage(toolId, result));
+                // Persist after each tool call so the workspace drawer can display real-time data
+                saveSession(messages);
 
                 // idle 工具触发空闲轮询（让 LLM 决定进入 idle 的时机）
                 // idle tool triggers polling (LLM decides when to go idle)
