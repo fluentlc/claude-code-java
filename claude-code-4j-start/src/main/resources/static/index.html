@@ -1152,61 +1152,114 @@ function recordCompact(summary, transcriptFile) {
     </div>`;
 }
 
+/**
+ * Follow _transcript_file links to build an ordered chain: [oldest, ..., newest].
+ * Each entry: { file, msgs }
+ */
+async function buildTranscriptChain(latestFile) {
+  const chain = [];
+  let file = latestFile;
+  while (file) {
+    try {
+      const res = await fetch(`/api/transcripts/${encodeURIComponent(file)}`);
+      if (!res.ok) break;
+      const msgs = await res.json();
+      chain.unshift({ file, msgs }); // prepend → oldest first
+      // Find next (older) transcript file from first compact marker in this file
+      let nextFile = null;
+      for (const msg of msgs) {
+        if (msg.role === 'user' && typeof msg.content === 'string'
+            && msg.content.startsWith('[Context was compacted.') && msg._transcript_file) {
+          nextFile = msg._transcript_file;
+          break;
+        }
+      }
+      file = nextFile;
+    } catch(e) { break; }
+  }
+  return chain;
+}
+
+/**
+ * Render one tab of the chain. Shows summary at top (for latest tab),
+ * then renders messages with compact separators that are clickable to navigate tabs.
+ */
+function showChainTab(chain, idx) {
+  drawerContent.innerHTML = '';
+  const { msgs } = chain[idx];
+
+  // Show compact summary at top for the latest tab (from compactSessions)
+  if (idx === chain.length - 1 && compactSessions.length > 0) {
+    const summary = compactSessions[compactSessions.length - 1].summary;
+    if (summary) {
+      const summaryEl = document.createElement('div');
+      summaryEl.className = 'ai-text';
+      summaryEl.style.cssText = 'margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--b-sub);';
+      summaryEl.innerHTML = renderMarkdown(summary);
+      drawerContent.appendChild(summaryEl);
+    }
+  }
+
+  // Compact click handler: navigate to the tab that holds the linked file
+  const onCompactClick = idx > 0
+    ? (prevFile) => {
+        const targetIdx = chain.findIndex(c => c.file === prevFile);
+        if (targetIdx >= 0) {
+          drawerTabs.querySelectorAll('.drawer-tab')[targetIdx].click();
+        }
+      }
+    : null;
+
+  renderMiniMessages(drawerContent, msgs, onCompactClick);
+}
+
 async function renderCompactDrawer() {
   drawerTitle.textContent = '压缩历史';
   drawerTabs.innerHTML = '';
-  for (let i = 0; i < compactSessions.length; i++) {
+  drawerContent.innerHTML = '<div style="color:var(--t4);font-size:12px;padding:8px 0">加载中...</div>';
+
+  const latestFile = compactSessions.length > 0
+    ? compactSessions[compactSessions.length - 1].transcriptFile
+    : null;
+
+  if (!latestFile) {
+    // No transcript — just show summary text
+    drawerContent.innerHTML = '';
+    const summary = compactSessions.length > 0 ? compactSessions[0].summary : '';
+    if (summary) {
+      const el = document.createElement('div');
+      el.className = 'ai-text';
+      el.innerHTML = renderMarkdown(summary);
+      drawerContent.appendChild(el);
+    } else {
+      drawerContent.innerHTML = '<div style="color:var(--t4);font-size:12px">暂无压缩历史</div>';
+    }
+    return;
+  }
+
+  const chain = await buildTranscriptChain(latestFile);
+  if (chain.length === 0) {
+    drawerContent.innerHTML = '<div style="color:var(--err);font-size:12px">加载失败</div>';
+    return;
+  }
+
+  // Create tabs: 第1次压缩, 第2次压缩, ...
+  drawerTabs.innerHTML = '';
+  for (let i = 0; i < chain.length; i++) {
     const tab = document.createElement('button');
-    tab.className = 'drawer-tab' + (i === compactSessions.length - 1 ? ' active' : '');
+    tab.className = 'drawer-tab' + (i === chain.length - 1 ? ' active' : '');
     tab.textContent = `第${i + 1}次压缩`;
     const idx = i;
     tab.onclick = () => {
       drawerTabs.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      loadCompactTabContent(compactSessions[idx]);
+      showChainTab(chain, idx);
     };
     drawerTabs.appendChild(tab);
   }
-  if (compactSessions.length > 0) {
-    await loadCompactTabContent(compactSessions[compactSessions.length - 1]);
-  } else {
-    drawerContent.innerHTML = '<div style="color:var(--t4);font-size:12px">暂无压缩历史</div>';
-  }
-}
 
-async function loadCompactTabContent({ summary, transcriptFile }) {
-  drawerContent.innerHTML = '';
-  if (summary) {
-    const summaryEl = document.createElement('div');
-    summaryEl.className = 'ai-text';
-    summaryEl.style.cssText = 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--b-sub);';
-    summaryEl.innerHTML = renderMarkdown(summary);
-    drawerContent.appendChild(summaryEl);
-  }
-  if (!transcriptFile) {
-    const el = document.createElement('div');
-    el.style.cssText = 'color:var(--t4);font-size:12px;';
-    el.textContent = '无压缩前历史记录';
-    drawerContent.appendChild(el);
-    return;
-  }
-  const hdr = document.createElement('div');
-  hdr.style.cssText = 'font-size:11px;font-weight:510;color:var(--t4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;';
-  hdr.textContent = '压缩前对话记录';
-  drawerContent.appendChild(hdr);
-  try {
-    const res = await fetch(`/api/transcripts/${encodeURIComponent(transcriptFile)}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const msgs = await res.json();
-    const mini = document.createElement('div');
-    renderMiniMessages(mini, msgs);
-    drawerContent.appendChild(mini);
-  } catch(e) {
-    const errEl = document.createElement('div');
-    errEl.style.cssText = 'color:var(--err);font-size:12px;';
-    errEl.textContent = `加载失败: ${e.message}`;
-    drawerContent.appendChild(errEl);
-  }
+  // Default: show latest tab
+  showChainTab(chain, chain.length - 1);
 }
 
 /* ── Workspace Drawer ── */
@@ -1296,7 +1349,7 @@ async function loadTeammateContent(agentId, tmSessionId) {
  * .msg-user/.user-bubble, .msg-ai/.ai-body/.ai-reply-row/.ai-avatar/.ai-text,
  * .tool-block, .think-block — so the drawer looks identical to the main flow.
  */
-function renderMiniMessages(container, msgs) {
+function renderMiniMessages(container, msgs, onCompactClick) {
   container.innerHTML = '';
   // Build tool_call_id → result content for O(1) lookup
   const toolResultMap = {};
@@ -1323,12 +1376,21 @@ function renderMiniMessages(container, msgs) {
     }
     skipNextAssistantAck = false;
 
-    // Compact summary marker
+    // Compact summary marker — make it clickable when onCompactClick provided
     if (msg.role === 'user' && typeof msg.content === 'string'
         && msg.content.startsWith('[Context was compacted.')) {
+      const prevFile = msg._transcript_file || null;
       const sep = document.createElement('div');
-      sep.style.cssText = 'font-size:11px;color:var(--brand);padding:8px 0 4px;font-style:italic;border-top:1px solid var(--b-sub);margin-top:6px;';
-      sep.textContent = '── Context compressed ──';
+      if (prevFile && onCompactClick) {
+        sep.style.cssText = 'font-size:12px;color:var(--accent);padding:10px 0 6px;border-top:1px solid var(--b-sub);margin-top:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:510;';
+        sep.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 2L4 6l4 4"/></svg>查看更早的压缩历史`;
+        sep.onclick = () => onCompactClick(prevFile);
+        sep.onmouseenter = () => sep.style.opacity = '0.75';
+        sep.onmouseleave = () => sep.style.opacity = '1';
+      } else {
+        sep.style.cssText = 'font-size:11px;color:var(--brand);padding:8px 0 4px;font-style:italic;border-top:1px solid var(--b-sub);margin-top:6px;';
+        sep.textContent = '── Context compressed ──';
+      }
       container.appendChild(sep);
       continue;
     }

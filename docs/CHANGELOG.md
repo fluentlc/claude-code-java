@@ -5,6 +5,22 @@ Each version corresponds to one conversation iteration.
 
 ---
 
+## v0.13 — 2026-04-16
+
+### 需求
+> 点击"查看完整历史"时，根据 `_transcript_file` 逐层追溯所有压缩记录，工作空间按压缩顺序展示 Tabs（第1次、第2次…），每个 Tab 内的压缩分隔符可点击跳转到更早的 Tab
+
+### 变更
+
+#### `index.html` JS
+- 新增 `buildTranscriptChain(latestFile)`：从最新 transcript 文件开始，沿 `_transcript_file` 字段链式加载，返回 `[{file, msgs}, ...]`（oldest → newest 排序）
+- 新增 `showChainTab(chain, idx)`：渲染指定层级的 Tab 内容；最新 Tab 顶部展示 compactSessions 的 summary；构造 `onCompactClick` 回调，点击后根据 prevFile 定位并切换到对应 Tab
+- 重写 `renderCompactDrawer()`：调用 `buildTranscriptChain` 构建完整链，自动生成 N 个 Tabs，默认展示最新一次；若无 transcriptFile 则降级展示纯 summary
+- 移除旧的 `loadCompactTabContent()`（由 `showChainTab` 替代）
+- `renderMiniMessages(container, msgs, onCompactClick)`：新增第三个参数；compact 分隔符在有 `onCompactClick` 且 msg 带 `_transcript_file` 时渲染为带箭头的可点击行（`← 查看更早的压缩历史`），hover 有透明度反馈；无 callback 时保持原静态分隔符样式
+
+---
+
 ## v0.12 — 2026-04-15
 
 ### 需求
