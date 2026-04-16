@@ -5,6 +5,47 @@ Each version corresponds to one conversation iteration.
 
 ---
 
+## v0.16 — 2026-04-16
+
+### 需求
+> 修改 CLAUDE.md，补全缺失内容；每次改动都要放到 changelog 中
+
+### 变更
+
+#### `CLAUDE.md`
+- **项目概述**：加入 Web Playground 作为第三种交互方式
+- **构建与运行**：Web Playground 模式作为推荐启动方式，排在最前
+- **start 包结构**：完整补全 `StreamController`、`StreamService`、`SessionMeta`（含 `teammateCount`）；`ChatController` 展示所有端点；`index.html` 和 `claude.properties` 显式列出
+- **核心设计模式**：新增 `AgentEventListener` 详解；补充 `TeammateLoop` 实时 `saveSession()`；`SessionStore` 命名约定；`ContextCompactor` 三层压缩及 `_transcript_file` 链式追溯
+- **REST API**：同步/SSE/会话历史三组接口完整列出，含所有 SSE 事件类型表
+- **新增 Web Playground 章节**：关键 JS 函数表、全局状态说明、无构建步骤说明
+- **开发规范**：Changelog 维护强化为"不可跳过"；新增 Git 提交规范（禁止 Co-Authored-By Claude，指定提交命令）；新增扩展 SSE 事件三层管道说明
+
+---
+
+## v0.15 — 2026-04-16
+
+### 需求
+> 左侧对话历史中，除时间和概要外，涉及 teammate 的会话显示 agent 图标和数量提示
+
+### 变更
+
+#### `SessionMeta.java`（start/dto）
+- 新增 `int teammateCount` 字段
+
+#### `ChatController.java`（start/controller）
+- `listSessions()`：对每个 session 调用 `sessionStore.listTeammates(m.sessionId()).size()` 填入 `teammateCount`
+
+#### `index.html` CSS
+- `.si-time` 改为 inline（去掉独占一行）
+- 新增 `.si-meta`：flex 横排，包裹时间和 agents 徽标
+- 新增 `.si-agents`：人物图标 + 数量，accent 色低透明度
+
+#### `index.html` JS
+- `loadSessionList()`：`s.teammateCount > 0` 时渲染 SVG 人物图标 + `N agents` 徽标，嵌入 `.si-meta` 行
+
+---
+
 ## v0.14 — 2026-04-16
 
 ### 需求
