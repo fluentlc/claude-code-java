@@ -5,6 +5,18 @@ Each version corresponds to one conversation iteration.
 
 ---
 
+## v0.21 — 2026-04-20
+
+### 需求
+> 删除项目 skills 目录
+
+### 变更
+
+#### `skills/`（目录删除）
+- 删除 `skills/code-review/SKILL.md`、`skills/git-commit/SKILL.md` 及整个 `skills/` 目录
+
+---
+
 ## v0.20 — 2026-04-16
 
 ### 需求
