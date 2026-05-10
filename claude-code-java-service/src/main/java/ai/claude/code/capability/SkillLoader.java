@@ -1,9 +1,13 @@
 package ai.claude.code.capability;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 技能加载器 - 扫描 skills/ 目录，解析 SKILL.md 文件。

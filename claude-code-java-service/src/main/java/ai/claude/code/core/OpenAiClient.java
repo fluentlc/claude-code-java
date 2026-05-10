@@ -1,58 +1,33 @@
 package ai.claude.code.core;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Properties;
 
 /**
- * 原生 JDK 1.8 实现的 OpenAI Chat Completions API 客户端。
- * 兼容所有遵循 OpenAI 协议的服务（OpenAI、Azure OpenAI、本地 Ollama、One-API 等）。
+ * 原生 JDK HttpURLConnection 实现的 OpenAI Chat Completions API 客户端。
+ * 兼容所有遵循 OpenAI 协议的服务（OpenAI、Azure OpenAI、DashScope、本地 Ollama 等）。
  *
- * ===== 与 AnthropicClient 的核心区别 =====
- *
- * 1. 认证方式不同：
- *    - Anthropic: 请求头 x-api-key
- *    - OpenAI:    请求头 Authorization: Bearer <key>
- *
- * 2. 系统提示词位置不同：
- *    - Anthropic: createMessage(systemPrompt, messages, ...) → 独立的 "system" 字段
- *    - OpenAI:    系统提示词作为 {"role":"system"} 消息放在 messages 数组的第一条
- *
- * 3. 工具结果的角色不同：
- *    - Anthropic: tool_result 放在 user 消息的 content 数组中
- *    - OpenAI:    工具结果用独立的 role="tool" 消息，带 tool_call_id 字段
- *
- * 4. 工具定义结构不同：
- *    - Anthropic: {"name":..., "description":..., "input_schema":{...}}
- *    - OpenAI:    {"type":"function", "function":{"name":..., "description":..., "parameters":{...}}}
- *
- * 5. 工具调用在响应中的位置不同：
- *    - Anthropic: response.content[] 中的 {type:"tool_use"} block
- *    - OpenAI:    response.choices[0].message.tool_calls[] 数组
- *
- * 6. 停止原因字段名不同：
- *    - Anthropic: response.stop_reason = "tool_use" / "end_turn"
- *    - OpenAI:    response.choices[0].finish_reason = "tool_calls" / "stop"
- *
- * ===== 配置文件 =====
- * 读取 claude.properties，使用以下配置项：
- *   OPENAI_API_KEY     — API 密钥（必填）
- *   OPENAI_BASE_URL    — API 地址，默认 https://api.openai.com（可替换为兼容服务）
- *   OPENAI_MODEL_ID    — 模型 ID，如 gpt-4o（必填）
- *   DEBUG_PRINT_PAYLOAD — true/false，是否打印请求/响应报文
+ * 模型配置通过显式构造器传入，由上层（如 AgentBeans、ChatService）从 ModelStore 读取。
+ * DEBUG_PRINT_PAYLOAD 可通过环境变量开启。
  */
 @SuppressWarnings("JavadocBlankLines")
 public class OpenAiClient {
 
-    private static final String CONFIG_FILE = "claude.properties";
-    private static final Properties CONFIG = loadConfig();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private final String apiKey;
@@ -64,44 +39,9 @@ public class OpenAiClient {
     /** API 路径，默认 /v1/chat/completions，可替换为兼容服务的其他路径 */
     private final String apiPath;
 
-    private static Properties loadConfig() {
-        Properties props = new Properties();
-        InputStream is = OpenAiClient.class.getClassLoader().getResourceAsStream(CONFIG_FILE);
-        if (is != null) {
-            try {
-                props.load(is);
-                is.close();
-            } catch (IOException e) {
-                System.err.println("[WARN] Failed to load " + CONFIG_FILE + ": " + e.getMessage());
-            }
-        }
-        return props;
-    }
-
-    private static String getConfig(String key, String defaultValue) {
-        // 优先级：环境变量 > claude.properties > 默认值
-        String envVal = System.getenv(key);
-        if (envVal != null && !envVal.trim().isEmpty()) return envVal.trim();
-        String propVal = CONFIG.getProperty(key);
-        if (propVal != null && !propVal.trim().isEmpty()) return propVal.trim();
-        return defaultValue;
-    }
-
-    /** 从 claude.properties 读取配置的默认构造器。优先使用 ClientFactory 创建实例。 */
-    public OpenAiClient() {
-        this.baseUrl = getConfig("OPENAI_BASE_URL", "https://api.openai.com")
-                .replaceAll("/+$", "");
-        this.apiKey = getConfig("OPENAI_API_KEY", getConfig("OPENAI_AUTH_TOKEN", ""));
-        this.model = getConfig("OPENAI_MODEL_ID", "gpt-4o");
-        this.debugPrintPayload = Boolean.parseBoolean(getConfig("DEBUG_PRINT_PAYLOAD", "false"));
-        this.extraHeaders = Collections.<String, String>emptyMap();
-        this.apiPath = "/v1/chat/completions";
-
-        System.out.println("[OpenAiClient] base_url = " + baseUrl);
-        System.out.println("[OpenAiClient] model    = " + model);
-        System.out.println("[OpenAiClient] api_key  = " +
-                (apiKey.isEmpty() ? "(NOT SET!)" : apiKey.substring(0, Math.min(8, apiKey.length())) + "..."));
-        System.out.println("[OpenAiClient] debug    = " + debugPrintPayload);
+    private static boolean isDebugPrintPayload() {
+        String env = System.getenv("DEBUG_PRINT_PAYLOAD");
+        return env != null && Boolean.parseBoolean(env.trim());
     }
 
     /**
@@ -118,7 +58,7 @@ public class OpenAiClient {
         this.apiKey = apiKey;
         this.baseUrl = baseUrl.replaceAll("/+$", "");
         this.model = model;
-        this.debugPrintPayload = Boolean.parseBoolean(getConfig("DEBUG_PRINT_PAYLOAD", "false"));
+        this.debugPrintPayload = isDebugPrintPayload();
         this.extraHeaders = extraHeaders != null ? extraHeaders : Collections.<String, String>emptyMap();
         this.apiPath = apiPath != null ? apiPath : "/v1/chat/completions";
 
@@ -135,9 +75,7 @@ public class OpenAiClient {
     }
 
     /**
-     * 调用 OpenAI Chat Completions API。
-     *
-     * 接口签名与 AnthropicClient.createMessage 保持一致，方便对比学习。
+     * 调用 OpenAI Chat Completions API（非流式）。
      *
      * ===== OpenAI 请求结构 =====
      * {
@@ -206,11 +144,21 @@ public class OpenAiClient {
         return doPostStream(apiPath, GSON.toJson(body), listener);
     }
 
+    private String buildUrl(String path) {
+        String base = baseUrl.replaceAll("/+$", "");
+        String p = path.startsWith("/") ? path : "/" + path;
+        // 如果 base 已经以 path 结尾，直接返回 base，避免重复拼接
+        if (base.endsWith(p)) {
+            return base;
+        }
+        return base + p;
+    }
+
     private JsonObject doPostStream(String path, String jsonBody, AgentEventListener listener) {
         if (listener == null) throw new IllegalArgumentException("listener must not be null");
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(baseUrl + path);
+            URL url = new URL(buildUrl(path));
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
@@ -419,7 +367,7 @@ public class OpenAiClient {
     private String doPost(String path, String jsonBody) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(baseUrl + path);
+            URL url = new URL(buildUrl(path));
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
@@ -427,7 +375,7 @@ public class OpenAiClient {
             conn.setReadTimeout(120000);
 
             conn.setRequestProperty("Content-Type", "application/json");
-            // OpenAI 使用标准 Bearer Token 认证，而非 Anthropic 的自定义 x-api-key 头
+            // OpenAI 使用标准 Bearer Token 认证
             if (apiKey != null && !apiKey.isEmpty()) {
                 conn.setRequestProperty("Authorization", "Bearer " + apiKey);
             }
@@ -483,21 +431,9 @@ public class OpenAiClient {
 
     // ==================================================================================
     // 静态工具方法：构建 OpenAI 格式的消息和工具定义
-    //
-    // ===== OpenAI 消息结构 vs Anthropic 消息结构 =====
-    //
-    // Anthropic:
-    //   user:      {"role":"user", "content": "文本" 或 [{type:"tool_result",...}]}
-    //   assistant: {"role":"assistant", "content": [{type:"text",...}, {type:"tool_use",...}]}
-    //
-    // OpenAI:
-    //   system:    {"role":"system", "content": "文本"}           ← Anthropic 没有此角色
-    //   user:      {"role":"user", "content": "文本"}
-    //   assistant: {"role":"assistant", "content":null/文本, "tool_calls":[...]}
-    //   tool:      {"role":"tool", "tool_call_id":"...", "content":"结果文本"}  ← Anthropic 没有此角色
     // ==================================================================================
 
-    /** 构建 system 角色消息（Anthropic 中用独立的 system 字段，OpenAI 中是一条消息）*/
+    /** 构建 system 角色消息 */
     public static JsonObject systemMessage(String text) {
         JsonObject msg = new JsonObject();
         msg.addProperty("role", "system");
@@ -542,15 +478,6 @@ public class OpenAiClient {
     /**
      * 构建 tool 角色消息 —— 工具执行结果的载体。
      *
-     * ===== 与 Anthropic 的关键区别 =====
-     * Anthropic: tool_result 放在 user 消息的 content 数组中
-     *   {"role":"user", "content":[{"type":"tool_result","tool_use_id":"tu_1","content":"结果"}]}
-     *
-     * OpenAI: 工具结果是独立的 role="tool" 消息
-     *   {"role":"tool", "tool_call_id":"tc_1", "content":"结果"}
-     *
-     * 字段名也不同：Anthropic 用 tool_use_id，OpenAI 用 tool_call_id。
-     *
      * @param toolCallId 对应 assistant message 中 tool_calls[i].id 的值
      * @param content    工具执行结果文本
      */
@@ -569,11 +496,7 @@ public class OpenAiClient {
     /**
      * 从响应中提取 finish_reason。
      *
-     * OpenAI finish_reason 的可能值：
-     * - "tool_calls" → LLM 要调用工具（对应 Anthropic 的 "tool_use"）
-     * - "stop"       → 正常结束（对应 Anthropic 的 "end_turn"）
-     * - "length"     → 达到 max_tokens 限制（对应 Anthropic 的 "max_tokens"）
-     * - "content_filter" → 内容被过滤
+     * 可能值：tool_calls / stop / length / content_filter
      */
     public static String getStopReason(JsonObject response) {
         try {
@@ -636,25 +559,6 @@ public class OpenAiClient {
 
     // ==================================================================================
     // 工具定义构建方法
-    //
-    // ===== Anthropic vs OpenAI 工具定义结构对比 =====
-    //
-    // Anthropic:
-    // {
-    //   "name": "bash",
-    //   "description": "Run a shell command.",
-    //   "input_schema": {"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}
-    // }
-    //
-    // OpenAI（多了一层 "type":"function" 和 "function" 包装，参数字段名也从 input_schema 改为 parameters）:
-    // {
-    //   "type": "function",
-    //   "function": {
-    //     "name": "bash",
-    //     "description": "Run a shell command.",
-    //     "parameters": {"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}
-    //   }
-    // }
     // ==================================================================================
 
     /**
@@ -679,29 +583,28 @@ public class OpenAiClient {
 
     /**
      * 构建 OpenAI 格式的工具定义。
-     * 注意：参数字段名是 "parameters" 而非 Anthropic 的 "input_schema"。
      *
      * @param name        工具名称
      * @param description 工具描述
-     * @param parameters  JSON Schema（可直接复用 AnthropicClient.schema() 生成的对象）
+     * @param parameters  JSON Schema（可直接复用 ToolUtils.schema() 生成的对象）
      */
     public static JsonObject toolDef(String name, String description, JsonObject parameters) {
         JsonObject function = new JsonObject();
         function.addProperty("name", name);
         function.addProperty("description", description);
-        function.add("parameters", parameters);  // 注意：OpenAI 用 "parameters"，Anthropic 用 "input_schema"
+        function.add("parameters", parameters);
 
         JsonObject tool = new JsonObject();
-        tool.addProperty("type", "function");    // OpenAI 比 Anthropic 多一层 type:"function" 包装
+        tool.addProperty("type", "function");
         tool.add("function", function);
         return tool;
     }
 
     /**
-     * 快速构建 JSON Schema —— 与 AnthropicClient.schema() 签名完全相同，可复用。
+     * 快速构建 JSON Schema —— 与 ToolUtils.schema() 签名完全相同，可复用。
      * 参数以三元组传入：(参数名, 类型, 是否必需)，如 schema("command","string","true")
      */
     public static JsonObject schema(String... nameTypePairs) {
-        return AnthropicClient.schema(nameTypePairs);
+        return ai.claude.code.tool.ToolUtils.schema(nameTypePairs);
     }
 }

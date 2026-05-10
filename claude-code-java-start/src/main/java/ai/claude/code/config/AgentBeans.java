@@ -5,6 +5,7 @@ import ai.claude.code.agent.AgentLoop;
 import ai.claude.code.capability.BackgroundRunner;
 import ai.claude.code.capability.ContextCompactor;
 import ai.claude.code.capability.MessageBus;
+import ai.claude.code.capability.ModelStore;
 import ai.claude.code.capability.SessionStore;
 import ai.claude.code.capability.SkillLoader;
 import ai.claude.code.capability.TaskStore;
@@ -12,8 +13,9 @@ import ai.claude.code.capability.TeammateRunner;
 import ai.claude.code.capability.TodoManager;
 import ai.claude.code.capability.WorktreeManager;
 import ai.claude.code.core.BaseTools;
-import ai.claude.code.core.ClientFactory;
 import ai.claude.code.core.OpenAiClient;
+
+import java.util.Collections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,8 +39,14 @@ public class AgentBeans {
     private String workDir;
 
     @Bean
-    public OpenAiClient openAiClient() {
-        return ClientFactory.openAiClient();
+    public OpenAiClient openAiClient(ModelStore modelStore) {
+        try {
+            return modelStore.createClient();
+        } catch (IllegalArgumentException e) {
+            // 未配置时返回空 client，避免 Spring 启动失败
+            return new OpenAiClient("", "https://api.openai.com", "gpt-4o",
+                    Collections.emptyMap(), "/v1/chat/completions");
+        }
     }
 
     @Bean
@@ -84,6 +92,11 @@ public class AgentBeans {
     @Bean
     public SessionStore sessionStore() {
         return new SessionStore(workDir + "/.sessions");
+    }
+
+    @Bean
+    public ModelStore modelStore() {
+        return new ModelStore(workDir + "/.models");
     }
 
     @Bean

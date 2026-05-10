@@ -5,6 +5,119 @@ Each version corresponds to one conversation iteration.
 
 ---
 
+## v0.22 — 2026-05-10
+
+### 需求
+> 代码质量审计与清理：删除死代码、统一重复逻辑、修正过时注释，为开源做准备
+
+### 变更
+
+#### `ModelStore.java`（service/capability）
+- 新增 `createClient()` 方法：统一从 `.models/models.json` 创建 `OpenAiClient`
+- 消除 `AgentBeans`、`ChatService`、`StreamService` 三处重复的配置读取逻辑
+
+#### `AgentBeans.java`（start/config）
+- `openAiClient()` 改为调用 `modelStore.createClient()`，未配置时返回空 client（避免 Spring 启动失败）
+
+#### `ChatService.java`（start/service）
+- 删除未使用的 `@Autowired AgentLoop agentLoop` 字段
+- 删除 `resolveLoop()` 私有方法，直接调用 `AgentAssembler.build(modelStore.createClient(), workDir)`
+- 删除 `OpenAiClient` 和 `Collections` 冗余 import
+
+#### `StreamService.java`（start/service）
+- 删除未使用的 `@Autowired OpenAiClient client` 字段
+- 删除 `resolveClient()` 私有方法，直接调用 `modelStore.createClient()`
+- 删除 `Collections` 冗余 import
+
+#### `ChatRequest.java`（start/dto）
+- 删除未使用的 `apiKey`、`baseUrl`、`modelId` 字段（后端已从 `ModelStore` 读取配置）
+
+#### `OpenAiClient.java`（service/core）
+- 删除无参构造器及 `claude.properties` 读取逻辑（模型配置已迁移至 `ModelStore`）
+- `DEBUG_PRINT_PAYLOAD` 改为仅通过环境变量读取
+- 删除所有 `AnthropicClient` 对比注释，精简为 OpenAI 专用文档
+- 替换通配符 import 为显式导入
+
+#### `AnthropicClient.java`（service/core，删除）
+- 删除整个类（~500 行死代码，从未被实例化）
+- `toolDef()` 和 `schema()` 静态方法迁移至 `ToolUtils`
+
+#### `ToolUtils.java`（service/tool）
+- 新增 `toolDef()` 和 `schema()` 静态方法（原 `AnthropicClient`）
+
+#### `BaseTools.java`（service/core）
+- 所有 `AnthropicClient.xxx` 调用替换为 `ToolUtils.xxx`
+- 替换通配符 import 为显式导入，删除未使用的 `java.io.*`
+
+#### `ClientFactory.java`（service/core，删除）
+- 删除整个过时工厂类（所有引用已迁移至 `ModelStore`）
+
+#### `WebConfig.java`（start/config，删除）
+- 删除空的 `@Configuration` 类
+
+#### `playground.html`（start/static）
+- 修正模型配置说明：「保存在浏览器本地存储」→「保存在服务端 .models/models.json」
+- 删除死 CSS：`.model-header`、`.model-title`、`.model-body`、`.think-check`、`.tool-dot.running`
+
+#### `docs/study/index.html`（文档）
+- 完整重写：从暗色赛博朋克主题改为 EKKO Pure Ink 白色主题（#fafafa 背景、中性灰色系、弱化强调色）
+- 系统架构图细化：5 层架构每层展开 5-6 个组件详细说明，新增点击展开详情面板
+- AgentLoop 时序图扩展：6 参与者/21 步骤 → 8 参与者/25 步骤，新增 ChatController、SessionStore 节点，完整展示 microCompact → LLM 流式 → 工具执行 → autoCompact → 持久化链路
+- Teams 时序图细化：6 参与者/19 步骤，完整展示 spawn → task_create → task_poll → tool → msg_send → msg_read → team_done 全流程
+
+#### `docs/study/api.html`（文档）
+- 完整重写：与 index.html 统一为白色主题
+- 所有 CSS 变量从暗色霓虹色系（#050d1a 背景、#00d4ff 强调）替换为浅色中性色（#fafafa 背景、#4a6fa5 强调）
+- 端点卡片、代码块、SSE 演示、生命周期动画全部适配白色背景
+- 导航栏、按钮、表格等交互元素同步调整配色
+
+#### `docs/study/index.html`（文档 — 内容一致性修复）
+- 删除快速上手中错误的环境变量预配置描述（ModelStore 不读取环境变量）
+- 10 项核心能力：SecurityUtils（实际在 core/ 包）→ TeamProtocol
+- 架构图 capability 层补充遗漏的 TaskPoller
+- CLI 命令补充 `/skill`
+- 修复所有相对路径链接（/api → api.html, /playground → http://localhost:8080）
+
+#### `docs/study/api.html`（文档 — 内容一致性修复）
+- API 端点数量 8 → 9，补充遗漏的 GET/POST `/api/model-config`
+- SSE 事件类型数量 14 → 15（补充 error 事件）
+- 删除错误的环境变量预配置段落
+- 配置部分小标题去除"环境变量"
+- 修复 404 状态码样式（从 s2xx 改为 s4xx）
+- 修复相对路径链接（/ → index.html）
+
+#### `application.properties`（start/resources）
+- 删除未使用的 `CLIENT_TYPE=openai`
+- 修正模型配置迁移说明
+
+#### 其他导入清理
+- `SkillLoader`、`TaskStore`、`ContextCompactor`、`WorktreeManager`、`MessageBus`、`TaskPoller`：替换通配符 import 为显式导入
+
+#### `README.md`
+- 删除已不存在的 `AnthropicClient`、`ClientFactory` 架构引用
+- 快速开始：删除 `claude.properties` 配置方式，改为 Playground「设置」菜单 + `.models/models.json` 说明
+- 扩展示例：`OpenAiClient.toolDef()` / `schema()` 更正为 `ToolUtils.toolDef()` / `schema()`
+- 英文章节同步以上修正
+
+#### `CLAUDE.md`
+- 修正配置说明：删除 `claude.properties` 及环境变量相关内容，改为 `ModelStore` + Playground 设置
+- 删除 `AnthropicClient`、`ClientFactory` 架构引用
+- 删除 `CLIENT_TYPE` 配置项说明
+- `claude.properties` → `application.properties`
+
+#### `docs/study/index.html`
+- **架构图**：删除 `AnthropicClient`、`ClientFactory`；新增 `AgentEventListener`
+- **快速开始**：`claude.properties` → Playground「设置」菜单 + `.models/models.json`
+- **AgentLoop 时序图**：参与者从 4 个扩展至 6 个（增加 EventListener、Compactor），步骤从 10 步扩展至 21 步，完整展示 microCompact、autoCompact、SSE 事件推送全流程
+- **Teams 时序图**：参与者从 4 个扩展至 6 个（增加 MessageBus、TaskStore），步骤从 8 步扩展至 19 步，完整展示 task_create → task_poll → 认领 → 执行 → task_update → msg_send → msg_read 全生命周期
+- **架构详情（archData）**：Core 层描述更新为 OpenAI 专用，补充 `AgentEventListener` 说明
+
+#### `docs/study/api.html`
+- **配置参考**：整节重写，删除 `claude.properties`、`CLIENT_TYPE`、配置优先级说明，改为 ModelStore + Playground 设置菜单 + 环境变量预配置
+- **配置表**：删除 `CLIENT_TYPE`、`OPENAI_API_KEY` 默认值改为环境变量方式
+
+---
+
 ## v0.21 — 2026-04-20
 
 ### 需求

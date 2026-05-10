@@ -1,11 +1,13 @@
 package ai.claude.code.core;
 
+import ai.claude.code.tool.ToolUtils;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -267,8 +269,8 @@ public class BaseTools {
      * 参数只有一个：command（字符串，必需）。
      */
     public static JsonObject bashToolDef() {
-        return AnthropicClient.toolDef("bash", "Run a shell command.",
-                AnthropicClient.schema("command", "string", "true"));
+        return ToolUtils.toolDef("bash", "Run a shell command.",
+                ToolUtils.schema("command", "string", "true"));
     }
 
     /**
@@ -277,8 +279,8 @@ public class BaseTools {
      * limit 设为非必需参数，默认读取全部内容。
      */
     public static JsonObject readFileToolDef() {
-        return AnthropicClient.toolDef("read_file", "Read file contents.",
-                AnthropicClient.schema("path", "string", "true", "limit", "integer", "false"));
+        return ToolUtils.toolDef("read_file", "Read file contents.",
+                ToolUtils.schema("path", "string", "true", "limit", "integer", "false"));
     }
 
     /**
@@ -287,8 +289,8 @@ public class BaseTools {
      * 两个参数都是必需的，因为写文件必须知道写到哪里、写什么内容。
      */
     public static JsonObject writeFileToolDef() {
-        return AnthropicClient.toolDef("write_file", "Write content to file.",
-                AnthropicClient.schema("path", "string", "true", "content", "string", "true"));
+        return ToolUtils.toolDef("write_file", "Write content to file.",
+                ToolUtils.schema("path", "string", "true", "content", "string", "true"));
     }
 
     /**
@@ -297,8 +299,8 @@ public class BaseTools {
      * 三个参数缺一不可：需要知道编辑哪个文件、替换什么、替换成什么。
      */
     public static JsonObject editFileToolDef() {
-        return AnthropicClient.toolDef("edit_file", "Replace exact text in file.",
-                AnthropicClient.schema("path", "string", "true",
+        return ToolUtils.toolDef("edit_file", "Replace exact text in file.",
+                ToolUtils.schema("path", "string", "true",
                         "old_text", "string", "true",
                         "new_text", "string", "true"));
     }

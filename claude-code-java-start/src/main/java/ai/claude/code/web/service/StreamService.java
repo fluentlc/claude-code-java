@@ -5,6 +5,7 @@ import ai.claude.code.agent.AgentLoop;
 import ai.claude.code.capability.BackgroundRunner;
 import ai.claude.code.capability.ContextCompactor;
 import ai.claude.code.capability.MessageBus;
+import ai.claude.code.capability.ModelStore;
 import ai.claude.code.capability.SessionStore;
 import ai.claude.code.capability.SkillLoader;
 import ai.claude.code.capability.TaskStore;
@@ -40,13 +41,13 @@ public class StreamService {
     @Value("${claude.workdir:${user.dir}}")
     private String workDir;
 
-    @Autowired private OpenAiClient client;
     @Autowired private BackgroundRunner bgRunner;
     @Autowired private MessageBus messageBus;
     @Autowired private TeammateRunner teammateRunner;
     @Autowired private SkillLoader skillLoader;
     @Autowired private WorktreeManager worktreeManager;
     @Autowired private SessionStore sessionStore;
+    @Autowired private ModelStore modelStore;
 
     /**
      * Runs the Agent loop for one SSE request.
@@ -64,14 +65,18 @@ public class StreamService {
 
         SseAgentEventListener listener = new SseAgentEventListener(emitter);
 
+        OpenAiClient requestClient = modelStore.createClient();
+
         // Per-request stateful capabilities (avoid cross-request state pollution)
         TodoManager todoManager    = new TodoManager();
-        ContextCompactor compactor = new ContextCompactor(client, workDir);
+        ContextCompactor compactor = new ContextCompactor(requestClient, workDir);
 
-        AgentLoop loop = AgentAssembler.build(client, workDir,
+        AgentLoop loop = AgentAssembler.build(requestClient, workDir,
                 new BaseTools(workDir), todoManager, skillLoader,
                 compactor, new TaskStore(workDir + "/.tasks"),
                 bgRunner, worktreeManager, messageBus, teammateRunner);
+
+        teammateRunner.setClient(requestClient);
 
         // Register listener so TeammateLoop threads can forward events to the main SSE stream
         teammateRunner.setMainListener(listener);

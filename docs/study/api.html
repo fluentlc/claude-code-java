@@ -6,24 +6,23 @@
 <title>REST API 文档 — claude-code-java</title>
 <style>
 :root {
-  --bg:       #050d1a;
-  --bg2:      #071224;
-  --bg3:      #0a1929;
-  --panel:    #0d2035;
-  --border:   rgba(0,212,255,0.15);
-  --border2:  rgba(0,212,255,0.08);
-  --cyan:     #00d4ff;
-  --cyan2:    #00a8cc;
-  --purple:   #9d71ff;
-  --green:    #4afa7a;
-  --amber:    #ffb340;
-  --red:      #ff4d6a;
-  --text:     #c8d8e8;
-  --text-dim: #6a8099;
-  --text-bright: #e8f4ff;
-  --glow-c:   0 0 20px rgba(0,212,255,0.3);
-  --glow-p:   0 0 20px rgba(157,113,255,0.3);
-  --glow-g:   0 0 20px rgba(74,250,122,0.3);
+  --bg:       #fafafa;
+  --bg2:      #f5f5f5;
+  --bg3:      #f0f0f0;
+  --panel:    #ffffff;
+  --border:   #e0e0e0;
+  --border2:  #eeeeee;
+  --blue:     #4a6fa5;
+  --blue2:    #3d5f8a;
+  --purple:   #7a6fa5;
+  --green:    #4a7c59;
+  --amber:    #b07d3a;
+  --red:      #c44;
+  --text:     #333333;
+  --text-dim: #777777;
+  --text-bright: #1a1a1a;
+  --shadow:   0 1px 3px rgba(0,0,0,0.06);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.08);
   --ease:     cubic-bezier(0.4,0,0.2,1);
 }
 * { box-sizing:border-box; margin:0; padding:0; }
@@ -40,35 +39,35 @@ body {
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width:6px; height:6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius:3px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius:3px; }
 
 /* ── TOPBAR ── */
 .topbar {
   position: fixed; top:0; left:0; right:0; z-index:200;
   height:52px;
-  background: rgba(5,13,26,0.9);
+  background: rgba(255,255,255,0.92);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border);
   display: flex; align-items:center; gap:20px; padding:0 32px;
 }
 .topbar-logo {
   font-size:14px; font-weight:700; letter-spacing:.05em;
-  color: var(--cyan); text-decoration:none;
+  color: var(--blue); text-decoration:none;
   display:flex; align-items:center; gap:8px;
 }
 .topbar-logo svg { width:18px; height:18px; }
 .topbar-badge {
   font-size:11px; padding:2px 8px; border-radius:10px;
-  background: rgba(0,212,255,0.1); border:1px solid var(--border);
-  color: var(--cyan); letter-spacing:.04em; font-weight:600;
+  background: rgba(74,111,165,0.1); border:1px solid rgba(74,111,165,0.2);
+  color: var(--blue); letter-spacing:.04em; font-weight:600;
 }
 .topbar-nav { display:flex; gap:20px; margin-left:auto; }
 .topbar-nav a {
   color: var(--text-dim); text-decoration:none; font-size:13px;
   transition: color .2s;
 }
-.topbar-nav a:hover { color: var(--cyan); }
-.topbar-nav a.active { color: var(--cyan); }
+.topbar-nav a:hover { color: var(--blue); }
+.topbar-nav a.active { color: var(--blue); }
 
 /* ── HERO ── */
 .hero {
@@ -79,27 +78,27 @@ body {
 .hero-bg {
   position:absolute; inset:0; pointer-events:none;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,212,255,.07) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(157,113,255,.05) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(74,111,165,.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(122,111,165,.05) 0%, transparent 70%);
 }
 .hero-grid {
   position:absolute; inset:0; pointer-events:none;
   background-image:
-    linear-gradient(rgba(0,212,255,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+    linear-gradient(rgba(0,0,0,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,.03) 1px, transparent 1px);
   background-size: 40px 40px;
   mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
 }
 .hero-tag {
   display:inline-flex; align-items:center; gap:8px;
   padding:6px 16px; border-radius:20px;
-  background: rgba(0,212,255,.08); border:1px solid var(--border);
-  color: var(--cyan); font-size:12px; font-weight:600; letter-spacing:.06em;
+  background: rgba(74,111,165,.08); border:1px solid rgba(74,111,165,.15);
+  color: var(--blue); font-size:12px; font-weight:600; letter-spacing:.06em;
   text-transform:uppercase; margin-bottom:24px;
 }
 .hero-tag::before {
   content:''; width:6px; height:6px; border-radius:50%;
-  background: var(--cyan); box-shadow:0 0 6px var(--cyan);
+  background: var(--blue); box-shadow:0 0 6px rgba(74,111,165,.4);
   animation: blink 1.5s ease-in-out infinite;
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
@@ -107,7 +106,7 @@ h1 {
   font-size: clamp(2rem,5vw,3.2rem); font-weight:800;
   color: var(--text-bright); margin-bottom:16px; line-height:1.2;
 }
-h1 .hl { color: var(--cyan); }
+h1 .hl { color: var(--blue); }
 .hero-sub {
   font-size:1.05rem; color:var(--text-dim); margin-bottom:32px; max-width:560px; margin-inline:auto;
 }
@@ -118,15 +117,15 @@ h1 .hl { color: var(--cyan); }
   text-decoration:none; transition:all .2s var(--ease); cursor:pointer;
 }
 .btn-primary {
-  background: rgba(0,212,255,.12); border:1px solid var(--cyan);
-  color: var(--cyan);
+  background: rgba(74,111,165,.1); border:1px solid var(--blue);
+  color: var(--blue);
 }
-.btn-primary:hover { background: rgba(0,212,255,.2); box-shadow: var(--glow-c); }
+.btn-primary:hover { background: rgba(74,111,165,.18); box-shadow: var(--shadow-hover); }
 .btn-ghost {
   background: transparent; border:1px solid var(--border);
   color: var(--text-dim);
 }
-.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
 
 /* ── QUICK OVERVIEW ── */
 .overview {
@@ -134,12 +133,13 @@ h1 .hl { color: var(--cyan); }
   gap:16px; max-width:900px; margin:0 auto 80px; padding:0 32px;
 }
 .ov-card {
-  background: var(--panel); border:1px solid var(--border2);
+  background: var(--panel); border:1px solid var(--border);
   border-radius:12px; padding:20px;
   transition:border-color .2s, box-shadow .2s;
+  box-shadow: var(--shadow);
 }
-.ov-card:hover { border-color:var(--border); box-shadow: var(--glow-c); }
-.ov-num { font-size:2rem; font-weight:800; color:var(--cyan); line-height:1; margin-bottom:4px; }
+.ov-card:hover { border-color:rgba(74,111,165,.3); box-shadow: var(--shadow-hover); }
+.ov-num { font-size:2rem; font-weight:800; color:var(--blue); line-height:1; margin-bottom:4px; }
 .ov-label { font-size:12px; color:var(--text-dim); font-weight:600; letter-spacing:.05em; text-transform:uppercase; }
 .ov-desc { font-size:13px; color:var(--text); margin-top:6px; }
 
@@ -150,40 +150,41 @@ main { max-width:960px; margin:0 auto; padding:0 32px 100px; }
 .section { margin-bottom:80px; }
 .section-header {
   display:flex; align-items:center; gap:16px; margin-bottom:32px;
-  padding-bottom:16px; border-bottom:1px solid var(--border2);
+  padding-bottom:16px; border-bottom:1px solid var(--border);
 }
 .section-icon {
   width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;
   font-size:18px; flex-shrink:0;
 }
-.icon-cyan  { background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.2); color:var(--cyan); }
-.icon-purple{ background:rgba(157,113,255,.1); border:1px solid rgba(157,113,255,.2); color:var(--purple); }
-.icon-green { background:rgba(74,250,122,.1); border:1px solid rgba(74,250,122,.2); color:var(--green); }
-.icon-amber { background:rgba(255,179,64,.1); border:1px solid rgba(255,179,64,.2); color:var(--amber); }
+.icon-blue  { background:rgba(74,111,165,.1); border:1px solid rgba(74,111,165,.2); color:var(--blue); }
+.icon-purple{ background:rgba(122,111,165,.1); border:1px solid rgba(122,111,165,.2); color:var(--purple); }
+.icon-green { background:rgba(74,124,89,.1); border:1px solid rgba(74,124,89,.2); color:var(--green); }
+.icon-amber { background:rgba(176,125,58,.1); border:1px solid rgba(176,125,58,.2); color:var(--amber); }
 .section-title { font-size:1.5rem; font-weight:700; color:var(--text-bright); }
 .section-subtitle { font-size:13px; color:var(--text-dim); margin-top:2px; }
 
 /* ── ENDPOINT CARD ── */
 .ep-card {
-  background: var(--panel); border:1px solid var(--border2);
+  background: var(--panel); border:1px solid var(--border);
   border-radius:12px; margin-bottom:24px; overflow:hidden;
-  transition:border-color .2s;
+  transition:border-color .2s, box-shadow .2s;
+  box-shadow: var(--shadow);
 }
-.ep-card:hover { border-color:var(--border); }
+.ep-card:hover { border-color:rgba(74,111,165,.3); box-shadow: var(--shadow-hover); }
 .ep-header {
   display:flex; align-items:center; gap:12px;
   padding:16px 24px; border-bottom:1px solid var(--border2);
   cursor:pointer; user-select:none;
 }
-.ep-header:hover { background:rgba(0,212,255,.02); }
+.ep-header:hover { background:rgba(74,111,165,.02); }
 .method-badge {
   font-family:'JetBrains Mono','Courier New',monospace;
   font-size:11px; font-weight:700; padding:4px 10px;
   border-radius:5px; min-width:58px; text-align:center; letter-spacing:.06em;
 }
-.m-post   { background:rgba(74,250,122,.1); color:var(--green); border:1px solid rgba(74,250,122,.25); }
-.m-get    { background:rgba(0,212,255,.1); color:var(--cyan); border:1px solid rgba(0,212,255,.25); }
-.m-delete { background:rgba(255,77,106,.1); color:var(--red); border:1px solid rgba(255,77,106,.25); }
+.m-post   { background:rgba(74,124,89,.1); color:var(--green); border:1px solid rgba(74,124,89,.25); }
+.m-get    { background:rgba(74,111,165,.1); color:var(--blue); border:1px solid rgba(74,111,165,.25); }
+.m-delete { background:rgba(204,68,68,.08); color:var(--red); border:1px solid rgba(204,68,68,.25); }
 .ep-path {
   font-family:'JetBrains Mono','Courier New',monospace;
   font-size:14px; color:var(--text-bright); font-weight:600;
@@ -200,23 +201,23 @@ main { max-width:960px; margin:0 auto; padding:0 32px 100px; }
   color:var(--text-dim); margin:0 0 12px;
 }
 pre.code-block {
-  background: #020c18; border:1px solid var(--border2); border-radius:8px;
+  background: #f8f9fa; border:1px solid var(--border2); border-radius:8px;
   padding:16px 20px; font-family:'JetBrains Mono','Courier New',monospace;
   font-size:13px; color:var(--text); line-height:1.7; overflow-x:auto;
   margin-bottom:20px; position:relative;
 }
-pre.code-block .key   { color:var(--cyan); }
+pre.code-block .key   { color:var(--blue); }
 pre.code-block .str   { color:var(--green); }
 pre.code-block .num   { color:var(--purple); }
 pre.code-block .comm  { color:var(--text-dim); font-style:italic; }
 pre.code-block .kw    { color:var(--amber); }
 .copy-btn {
   position:absolute; top:10px; right:10px;
-  background:rgba(0,212,255,.08); border:1px solid var(--border2);
+  background:rgba(74,111,165,.08); border:1px solid var(--border2);
   color:var(--text-dim); font-size:11px; padding:3px 9px; border-radius:4px;
   cursor:pointer; transition:all .2s;
 }
-.copy-btn:hover { background:rgba(0,212,255,.15); color:var(--cyan); }
+.copy-btn:hover { background:rgba(74,111,165,.15); color:var(--blue); }
 
 .field-table { width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; }
 .field-table th {
@@ -224,39 +225,39 @@ pre.code-block .kw    { color:var(--amber); }
   text-transform:uppercase; letter-spacing:.06em;
   padding:8px 12px; border-bottom:1px solid var(--border2);
 }
-.field-table td { padding:10px 12px; border-bottom:1px solid rgba(0,212,255,.04); }
+.field-table td { padding:10px 12px; border-bottom:1px solid rgba(0,0,0,.04); }
 .field-table tr:last-child td { border-bottom:none; }
-.field-table td:first-child { font-family:'JetBrains Mono','Courier New',monospace; color:var(--cyan); }
+.field-table td:first-child { font-family:'JetBrains Mono','Courier New',monospace; color:var(--blue); }
 .field-table td:nth-child(2) { color:var(--purple); font-family:'JetBrains Mono','Courier New',monospace; font-size:12px; }
 .tag {
   display:inline-block; font-size:10px; padding:2px 7px; border-radius:8px;
   font-weight:700; letter-spacing:.04em; margin-left:4px; vertical-align:middle;
 }
-.tag-req { background:rgba(255,179,64,.1); color:var(--amber); border:1px solid rgba(255,179,64,.3); }
-.tag-opt { background:rgba(106,128,153,.1); color:var(--text-dim); border:1px solid rgba(106,128,153,.2); }
+.tag-req { background:rgba(176,125,58,.1); color:var(--amber); border:1px solid rgba(176,125,58,.3); }
+.tag-opt { background:rgba(0,0,0,.05); color:var(--text-dim); border:1px solid rgba(0,0,0,.1); }
 .status-badge {
   display:inline-flex; align-items:center; gap:5px;
   padding:4px 12px; border-radius:5px; font-size:12px; font-weight:700;
   margin:0 6px 8px 0; font-family:'JetBrains Mono','Courier New',monospace;
 }
-.s2xx { background:rgba(74,250,122,.08); color:var(--green); border:1px solid rgba(74,250,122,.25); }
-.s4xx { background:rgba(255,77,106,.08); color:var(--red); border:1px solid rgba(255,77,106,.25); }
+.s2xx { background:rgba(74,124,89,.08); color:var(--green); border:1px solid rgba(74,124,89,.25); }
+.s4xx { background:rgba(204,68,68,.08); color:var(--red); border:1px solid rgba(204,68,68,.25); }
 
 /* ── SSE STREAM DEMO ── */
 .sse-demo-wrap {
-  background:#020c18; border:1px solid var(--border2); border-radius:12px;
-  overflow:hidden; margin-bottom:32px;
+  background:var(--panel); border:1px solid var(--border); border-radius:12px;
+  overflow:hidden; margin-bottom:32px; box-shadow: var(--shadow);
 }
 .sse-demo-toolbar {
   display:flex; align-items:center; gap:8px; padding:12px 16px;
-  border-bottom:1px solid var(--border2); background:var(--panel);
+  border-bottom:1px solid var(--border2); background:var(--bg2);
 }
 .sse-dot { width:10px; height:10px; border-radius:50%; }
 .sse-dot-r { background:#ff5f57; }
 .sse-dot-y { background:#febc2e; }
 .sse-dot-g { background:#28c840; }
 .sse-demo-title { font-size:12px; color:var(--text-dim); margin-left:8px; font-family:'JetBrains Mono','Courier New',monospace; }
-.sse-demo-body { padding:16px 20px; min-height:200px; max-height:360px; overflow-y:auto; }
+.sse-demo-body { padding:16px 20px; min-height:200px; max-height:360px; overflow-y:auto; background:#f8f9fa; }
 .sse-line {
   font-family:'JetBrains Mono','Courier New',monospace;
   font-size:12.5px; line-height:1.9; display:flex; gap:16px;
@@ -266,16 +267,16 @@ pre.code-block .kw    { color:var(--amber); }
 @keyframes sseFadeIn { to{opacity:1;transform:none} }
 .sse-event-type { color:var(--purple); min-width:140px; }
 .sse-data { color:var(--text); }
-.sse-data .jk { color:var(--cyan); }
+.sse-data .jk { color:var(--blue); }
 .sse-data .jv { color:var(--green); }
 .sse-data .jn { color:var(--amber); }
-.sse-ctrl { display:flex; align-items:center; gap:10px; padding:12px 16px; border-top:1px solid var(--border2); background:var(--panel); }
+.sse-ctrl { display:flex; align-items:center; gap:10px; padding:12px 16px; border-top:1px solid var(--border2); background:var(--bg2); }
 .sse-ctrl button {
-  background:rgba(0,212,255,.08); border:1px solid var(--border);
-  color:var(--cyan); font-size:12px; padding:5px 14px; border-radius:5px;
+  background:rgba(74,111,165,.08); border:1px solid rgba(74,111,165,.2);
+  color:var(--blue); font-size:12px; padding:5px 14px; border-radius:5px;
   cursor:pointer; transition:all .2s;
 }
-.sse-ctrl button:hover { background:rgba(0,212,255,.15); }
+.sse-ctrl button:hover { background:rgba(74,111,165,.15); }
 .sse-status { font-size:12px; color:var(--text-dim); margin-left:auto; }
 
 /* ── SSE EVENT TABLE ── */
@@ -283,25 +284,25 @@ pre.code-block .kw    { color:var(--amber); }
 .event-table th {
   text-align:left; padding:10px 14px; font-size:11px; font-weight:700;
   letter-spacing:.07em; text-transform:uppercase; color:var(--text-dim);
-  border-bottom:1px solid var(--border2); background:rgba(0,0,0,.2);
+  border-bottom:1px solid var(--border2); background:rgba(0,0,0,.03);
 }
-.event-table td { padding:11px 14px; border-bottom:1px solid rgba(0,212,255,.04); font-size:13px; vertical-align:top; }
-.event-table tr:hover td { background:rgba(0,212,255,.02); }
+.event-table td { padding:11px 14px; border-bottom:1px solid rgba(0,0,0,.04); font-size:13px; vertical-align:top; }
+.event-table tr:hover td { background:rgba(74,111,165,.02); }
 .event-name {
   font-family:'JetBrains Mono','Courier New',monospace;
   color:var(--purple); font-size:12px; white-space:nowrap;
 }
-.event-payload { font-family:'JetBrains Mono','Courier New',monospace; color:var(--cyan); font-size:11.5px; }
+.event-payload { font-family:'JetBrains Mono','Courier New',monospace; color:var(--blue); font-size:11.5px; }
 .event-group-header td {
-  padding:6px 14px; background:rgba(157,113,255,.05);
+  padding:6px 14px; background:rgba(122,111,165,.05);
   font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--purple);
   text-transform:uppercase;
 }
 
 /* ── SESSION LIFECYCLE ANIMATION ── */
 .lifecycle-wrap {
-  background:var(--panel); border:1px solid var(--border2); border-radius:12px;
-  padding:32px; margin-bottom:24px;
+  background:var(--panel); border:1px solid var(--border); border-radius:12px;
+  padding:32px; margin-bottom:24px; box-shadow: var(--shadow);
 }
 .lc-row {
   display:flex; align-items:stretch; gap:0;
@@ -317,20 +318,20 @@ pre.code-block .kw    { color:var(--amber); }
   transition: box-shadow .3s;
 }
 .lc-node-active { animation: lcPulse 1.5s ease-in-out infinite; }
-@keyframes lcPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.3)} 50%{box-shadow:0 0 0 10px rgba(0,212,255,0)} }
+@keyframes lcPulse { 0%,100%{box-shadow:0 0 0 0 rgba(74,111,165,.2)} 50%{box-shadow:0 0 0 10px rgba(74,111,165,0)} }
 .lc-label { font-size:12px; color:var(--text-dim); text-align:center; margin-top:8px; line-height:1.4; }
-.lc-label strong { display:block; color:var(--text); font-size:13px; margin-bottom:2px; }
+.lc-label strong { display:block; color:var(--text-bright); font-size:13px; margin-bottom:2px; }
 .lc-connector {
-  flex:1; height:2px; background:linear-gradient(90deg, var(--cyan2), transparent);
+  flex:1; height:2px; background:linear-gradient(90deg, var(--blue2), transparent);
   margin-top:23px; min-width:24px; position:relative;
 }
 .lc-connector::after {
   content:''; position:absolute; right:-1px; top:-4px;
-  border-left:8px solid var(--cyan2); border-top:4px solid transparent; border-bottom:4px solid transparent;
+  border-left:8px solid var(--blue2); border-top:4px solid transparent; border-bottom:4px solid transparent;
 }
 .lc-file {
   margin-top:20px; padding:8px 14px; border-radius:7px;
-  background:rgba(0,212,255,.06); border:1px solid var(--border2);
+  background:rgba(74,111,165,.06); border:1px solid var(--border2);
   font-family:'JetBrains Mono','Courier New',monospace; font-size:11px; color:var(--text-dim);
   text-align:center; max-width:140px;
 }
@@ -342,19 +343,19 @@ pre.code-block .kw    { color:var(--amber); }
   letter-spacing:.07em; text-transform:uppercase; color:var(--text-dim);
   border-bottom:1px solid var(--border2);
 }
-.config-table td { padding:11px 14px; border-bottom:1px solid rgba(0,212,255,.04); font-size:13px; }
+.config-table td { padding:11px 14px; border-bottom:1px solid rgba(0,0,0,.04); font-size:13px; }
 .config-table td:first-child { font-family:'JetBrains Mono','Courier New',monospace; color:var(--amber); font-size:12px; }
 .config-table td:nth-child(2) { color:var(--text-dim); font-family:'JetBrains Mono','Courier New',monospace; font-size:12px; }
 .required-dot { color:var(--red); }
 
 /* ── CURL QUICK ── */
 .curl-block {
-  background:#020c18; border:1px solid var(--border2); border-radius:8px;
+  background:#f8f9fa; border:1px solid var(--border2); border-radius:8px;
   padding:0; overflow:hidden; margin-bottom:16px;
 }
-.curl-label { padding:8px 14px; background:var(--panel); font-size:11px; color:var(--text-dim); border-bottom:1px solid var(--border2); }
+.curl-label { padding:8px 14px; background:var(--bg2); font-size:11px; color:var(--text-dim); border-bottom:1px solid var(--border2); }
 .curl-body { padding:14px 18px; font-family:'JetBrains Mono','Courier New',monospace; font-size:13px; color:var(--text); line-height:1.7; overflow-x:auto; }
-.curl-body .cmd { color:var(--cyan); }
+.curl-body .cmd { color:var(--blue); }
 .curl-body .flag { color:var(--purple); }
 .curl-body .val { color:var(--green); }
 .curl-body .comm { color:var(--text-dim); font-style:italic; }
@@ -365,10 +366,10 @@ pre.code-block .kw    { color:var(--amber); }
 
 /* ── FOOTER ── */
 footer {
-  border-top:1px solid var(--border2);
+  border-top:1px solid var(--border);
   padding:32px; text-align:center; color:var(--text-dim); font-size:13px;
 }
-footer a { color:var(--cyan); text-decoration:none; }
+footer a { color:var(--blue); text-decoration:none; }
 footer a:hover { text-decoration:underline; }
 </style>
 </head>
@@ -376,7 +377,7 @@ footer a:hover { text-decoration:underline; }
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <a href="/" class="topbar-logo">
+  <a href="index.html" class="topbar-logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
     </svg>
@@ -384,13 +385,13 @@ footer a:hover { text-decoration:underline; }
   </a>
   <span class="topbar-badge">REST API</span>
   <nav class="topbar-nav">
-    <a href="/">首页</a>
-    <a href="/api" class="active">API 文档</a>
+    <a href="index.html">首页</a>
+    <a href="api.html" class="active">API 文档</a>
     <a href="#sync">同步接口</a>
     <a href="#sse">SSE 流式</a>
     <a href="#sessions">会话接口</a>
     <a href="#config">配置</a>
-    <a href="/playground" style="padding:3px 10px;border-radius:5px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);font-weight:600;">Playground →</a>
+    <a href="http://localhost:8080" style="padding:3px 10px;border-radius:5px;background:rgba(74,111,165,0.1);border:1px solid rgba(74,111,165,0.2);color:var(--blue);font-weight:600;">Playground →</a>
   </nav>
 </div>
 
@@ -400,7 +401,7 @@ footer a:hover { text-decoration:underline; }
   <div class="hero-grid"></div>
   <div class="hero-tag">REST API Reference</div>
   <h1><span class="hl">claude-code-java</span> API 文档</h1>
-  <p class="hero-sub">Spring Boot 3.2 · SSE 流式推送 · 14 种事件类型 · 会话持久化</p>
+  <p class="hero-sub">Spring Boot 3.2 · SSE 流式推送 · 15 种事件类型 · 会话持久化</p>
   <div class="hero-links">
     <a href="#sync" class="btn btn-primary">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -413,12 +414,12 @@ footer a:hover { text-decoration:underline; }
 <!-- OVERVIEW STATS -->
 <div class="overview">
   <div class="ov-card fade-up">
-    <div class="ov-num">8</div>
+    <div class="ov-num">9</div>
     <div class="ov-label">API 端点</div>
-    <div class="ov-desc">覆盖聊天、流式、会话、历史</div>
+    <div class="ov-desc">覆盖聊天、流式、会话、历史、模型配置</div>
   </div>
   <div class="ov-card fade-up">
-    <div class="ov-num">14</div>
+    <div class="ov-num">15</div>
     <div class="ov-label">SSE 事件类型</div>
     <div class="ov-desc">思考、工具、压缩、Teammate、完成</div>
   </div>
@@ -439,7 +440,7 @@ footer a:hover { text-decoration:underline; }
 <!-- ═══ BASE URL ═══ -->
 <div class="section fade-up" id="start">
   <div class="section-header">
-    <div class="section-icon icon-cyan">⚡</div>
+    <div class="section-icon icon-blue">⚡</div>
     <div>
       <div class="section-title">快速开始</div>
       <div class="section-subtitle">Base URL · 健康检查</div>
@@ -552,7 +553,7 @@ footer a:hover { text-decoration:underline; }
     <div class="section-icon icon-purple">⚡</div>
     <div>
       <div class="section-title">SSE 流式接口</div>
-      <div class="section-subtitle">实时推送，14 种事件类型，支持思考/工具/压缩/Teammate 全流程</div>
+      <div class="section-subtitle">实时推送，15 种事件类型，支持思考/工具/压缩/Teammate 全流程</div>
     </div>
   </div>
 
@@ -599,7 +600,7 @@ footer a:hover { text-decoration:underline; }
   </div>
 
   <!-- SSE EVENT TYPE TABLE -->
-  <div class="subsection-title" style="margin-bottom:12px;">全部事件类型（14 种）</div>
+  <div class="subsection-title" style="margin-bottom:12px;">全部事件类型（15 种）</div>
   <table class="event-table">
     <tr><th>事件名</th><th>Payload 字段</th><th>说明</th></tr>
     <tr class="event-group-header"><td colspan="3">会话标识</td></tr>
@@ -806,7 +807,7 @@ footer a:hover { text-decoration:underline; }
       <span class="ep-toggle">▼</span>
     </div>
     <div class="ep-body open">
-      <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">读取 <code>.transcripts/{filename}</code>，返回压缩前完整消息数组。basename 校验防止路径穿越（filename 仅允许 <code>[\\w\\-]+\\.json</code>）。</p>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">读取 <code>.transcripts/{filename}</code>，返回压缩前完整消息数组。basename 校验防止路径穿越（filename 仅允许 <code>[\w\-]+\.json</code>）。</p>
       <pre class="code-block"><span class="comm"># compact_done 事件携带 transcriptFile 字段</span>
 <span class="comm"># 用它直接请求：</span>
 GET /api/transcripts/<span class="str">transcript_20260416_103045.json</span>
@@ -814,7 +815,7 @@ GET /api/transcripts/<span class="str">transcript_20260416_103045.json</span>
 <span class="comm"># Response: 消息数组，与 /messages 格式相同</span>
 [ { <span class="key">"role"</span>: <span class="str">"user"</span>, ... }, ... ]</pre>
       <span class="status-badge s4xx">400</span><span style="font-size:12px;color:var(--text-dim);">filename 含路径穿越字符</span><br>
-      <span class="status-badge s4xx" style="background:rgba(74,250,122,.08);color:var(--green);border-color:rgba(74,250,122,.25);">404</span><span style="font-size:12px;color:var(--text-dim);">文件不存在</span>
+      <span class="status-badge s4xx">404</span><span style="font-size:12px;color:var(--text-dim);">文件不存在</span>
     </div>
   </div>
 
@@ -823,31 +824,31 @@ GET /api/transcripts/<span class="str">transcript_20260416_103045.json</span>
   <div class="lifecycle-wrap">
     <div class="lc-row">
       <div class="lc-step">
-        <div class="lc-node lc-node-active" style="border-color:var(--cyan);background:rgba(0,212,255,.1);">📝</div>
+        <div class="lc-node lc-node-active" style="border-color:var(--blue);background:rgba(74,111,165,.1);">📝</div>
         <div class="lc-label"><strong>首次请求</strong>POST /api/chat<br>省略 sessionId</div>
         <div class="lc-file">.sessions/<br>生成 UUID.json</div>
       </div>
       <div class="lc-connector"></div>
       <div class="lc-step">
-        <div class="lc-node" style="border-color:var(--purple);background:rgba(157,113,255,.1);">🔄</div>
+        <div class="lc-node" style="border-color:var(--purple);background:rgba(122,111,165,.1);">🔄</div>
         <div class="lc-label"><strong>继续对话</strong>携带 sessionId<br>加载历史消息</div>
         <div class="lc-file">读取 + 写入<br>UUID.json</div>
       </div>
       <div class="lc-connector" style="background:linear-gradient(90deg,var(--purple),transparent);"></div>
       <div class="lc-step">
-        <div class="lc-node" style="border-color:var(--amber);background:rgba(255,179,64,.1);">🗜</div>
+        <div class="lc-node" style="border-color:var(--amber);background:rgba(176,125,58,.1);">🗜</div>
         <div class="lc-label"><strong>自动压缩</strong>消息数 ≥ 40<br>保存 transcript</div>
         <div class="lc-file">.transcripts/<br>timestamp.json</div>
       </div>
       <div class="lc-connector" style="background:linear-gradient(90deg,var(--amber),transparent);"></div>
       <div class="lc-step">
-        <div class="lc-node" style="border-color:var(--green);background:rgba(74,250,122,.1);">👥</div>
+        <div class="lc-node" style="border-color:var(--green);background:rgba(74,124,89,.1);">👥</div>
         <div class="lc-label"><strong>Agent Teams</strong>Teammate 子会话<br>独立持久化</div>
         <div class="lc-file">.sessions/<br>UUID-tm-alice.json</div>
       </div>
       <div class="lc-connector" style="background:linear-gradient(90deg,var(--green),transparent);"></div>
       <div class="lc-step">
-        <div class="lc-node" style="border-color:var(--red);background:rgba(255,77,106,.1);">🗑</div>
+        <div class="lc-node" style="border-color:var(--red);background:rgba(204,68,68,.08);">🗑</div>
         <div class="lc-label"><strong>清除会话</strong>DELETE /sessions/{id}<br>幂等操作</div>
         <div class="lc-file">删除<br>UUID.json</div>
       </div>
@@ -858,50 +859,83 @@ GET /api/transcripts/<span class="str">transcript_20260416_103045.json</span>
 <!-- ═══ CONFIGURATION ═══ -->
 <div class="section fade-up" id="config">
   <div class="section-header">
-    <div class="section-icon icon-cyan">⚙</div>
+    <div class="section-icon icon-blue">⚙</div>
     <div>
       <div class="section-title">配置参考</div>
-      <div class="section-subtitle">claude.properties · 环境变量 · 命令行覆盖</div>
+      <div class="section-subtitle">ModelStore · Playground 设置菜单</div>
     </div>
   </div>
 
   <p style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">
-    配置文件路径：<code style="color:var(--cyan);">claude-code-java-start/src/main/resources/claude.properties</code><br>
-    优先级：<span style="color:var(--green);">System.getenv()</span> &gt; <span style="color:var(--amber);">claude.properties</span> &gt; <span style="color:var(--text-dim);">默认值</span>
+    所有模型配置（API Key / Base URL / Model ID）通过 Web Playground「设置」菜单填写，或调用 POST /api/model-config 写入，持久化在服务端
+    <code style="color:var(--blue);">.models/models.json</code> 中，进程重启后自动恢复。
   </p>
 
-  <table class="config-table" style="background:var(--panel);border:1px solid var(--border2);border-radius:12px;overflow:hidden;margin-bottom:24px;">
-    <tr><th>配置项</th><th>默认值</th><th>说明</th></tr>
+  <!-- GET /api/model-config -->
+  <div class="ep-card">
+    <div class="ep-header" onclick="toggleEp(this)">
+      <span class="method-badge m-get">GET</span>
+      <span class="ep-path">/api/model-config</span>
+      <span class="ep-desc">读取当前模型配置（apiKey 脱敏）</span>
+      <span class="ep-toggle">▼</span>
+    </div>
+    <div class="ep-body open">
+      <span class="status-badge s2xx">200 OK</span>
+      <pre class="code-block">{
+  <span class="key">"apiKey"</span>:  <span class="str">"***xxxx"</span>,
+  <span class="key">"baseUrl"</span>: <span class="str">"https://api.openai.com"</span>,
+  <span class="key">"modelId"</span>: <span class="str">"gpt-4o"</span>
+}</pre>
+      <p style="font-size:13px;color:var(--text-dim);margin-top:8px;">安全处理：apiKey 仅返回最后 4 位，其余用 <code>***</code> 替代。</p>
+    </div>
+  </div>
+
+  <!-- POST /api/model-config -->
+  <div class="ep-card">
+    <div class="ep-header" onclick="toggleEp(this)">
+      <span class="method-badge m-post">POST</span>
+      <span class="ep-path">/api/model-config</span>
+      <span class="ep-desc">保存模型配置到 .models/models.json</span>
+      <span class="ep-toggle">▼</span>
+    </div>
+    <div class="ep-body open">
+      <div class="subsection-title">Request Body</div>
+      <table class="field-table">
+        <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+        <tr><td>apiKey<span class="tag tag-req">必填</span></td><td>string</td><td>OpenAI 协议 API 密钥</td></tr>
+        <tr><td>baseUrl<span class="tag tag-req">必填</span></td><td>string</td><td>服务端地址</td></tr>
+        <tr><td>modelId<span class="tag tag-req">必填</span></td><td>string</td><td>模型标识</td></tr>
+      </table>
+      <pre class="code-block">{
+  <span class="key">"apiKey"</span>:  <span class="str">"sk-xxxxxxxx"</span>,
+  <span class="key">"baseUrl"</span>: <span class="str">"https://api.openai.com"</span>,
+  <span class="key">"modelId"</span>: <span class="str">"gpt-4o"</span>
+}</pre>
+      <span class="status-badge s2xx">200 OK</span><span style="font-size:12px;color:var(--text-dim);">响应体为空</span>
+    </div>
+  </div>
+
+  <table class="config-table" style="background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px;box-shadow: var(--shadow);">
+    <tr><th>配置项</th><th>必填</th><th>说明</th></tr>
     <tr>
-      <td>OPENAI_API_KEY</td><td>—</td>
-      <td><span class="required-dot">★</span> 必填。API 密钥，优先读取同名环境变量</td>
+      <td>API Key</td><td>★</td>
+      <td>OpenAI 协议 API 密钥，支持 OpenAI / Azure / Ollama / DashScope 等任意兼容端点</td>
     </tr>
     <tr>
-      <td>OPENAI_BASE_URL</td><td>https://api.openai.com</td>
-      <td>OpenAI 协议服务地址，兼容各种云厂商</td>
+      <td>Base URL</td><td>★</td>
+      <td>服务端地址，如 <code>https://api.openai.com</code>、<code>http://localhost:11434</code></td>
     </tr>
     <tr>
-      <td>OPENAI_MODEL_ID</td><td>gpt-4o</td>
-      <td>模型 ID，如 <code>claude-opus-4-6</code>、<code>deepseek-chat</code></td>
+      <td>Model ID</td><td>★</td>
+      <td>模型标识，如 <code>gpt-4o</code>、<code>deepseek-chat</code>、<code>qwen-max</code></td>
     </tr>
     <tr>
-      <td>CLIENT_TYPE</td><td>openai</td>
-      <td><code>openai</code> 或 <code>anthropic</code>（选择请求协议）</td>
-    </tr>
-    <tr>
-      <td>DEBUG_PRINT_PAYLOAD</td><td>false</td>
-      <td>设为 <code>true</code> 打印完整 API 请求/响应报文</td>
+      <td>DEBUG_PRINT_PAYLOAD</td><td>—</td>
+      <td>环境变量，设为 <code>true</code> 打印完整 API 请求/响应报文（排查问题用）</td>
     </tr>
   </table>
 
-  <pre class="code-block"><span class="comm"># claude.properties 示例</span>
-<span class="key">OPENAI_API_KEY</span>=<span class="str">sk-xxxxxxxx</span>
-<span class="key">OPENAI_BASE_URL</span>=<span class="str">https://api.anthropic.com</span>
-<span class="key">OPENAI_MODEL_ID</span>=<span class="str">claude-opus-4-6</span>
-<span class="key">CLIENT_TYPE</span>=<span class="str">anthropic</span>
-<span class="key">DEBUG_PRINT_PAYLOAD</span>=<span class="str">false</span></pre>
-
-  <div class="subsection-title" style="margin-bottom:12px;">命令行参数覆盖</div>
+  <div class="subsection-title" style="margin-bottom:12px;">启动命令示例</div>
   <pre class="code-block"><span class="comm"># 修改端口</span>
 mvn exec:java -pl claude-code-java-start \
   -Dexec.mainClass=<span class="str">"ai.claude.code.Application"</span> \
@@ -956,11 +990,11 @@ const sseEvents = [
 ];
 
 const typeColors = {
-  session_id: '#6a8099', thinking_start: '#9d71ff', thinking_text: '#9d71ff',
-  thinking_end: '#9d71ff', text_delta: '#00d4ff', tool_start: '#4afa7a',
-  tool_end: '#4afa7a', tool_error: '#ff4d6a', team_tool_start: '#ffb340',
-  team_tool_end: '#ffb340', team_text: '#ffb340', team_done: '#ffb340',
-  compact_done: '#ff9d5c', done: '#4afa7a', error: '#ff4d6a'
+  session_id: '#777', thinking_start: '#7a6fa5', thinking_text: '#7a6fa5',
+  thinking_end: '#7a6fa5', text_delta: '#4a6fa5', tool_start: '#4a7c59',
+  tool_end: '#4a7c59', tool_error: '#c44', team_tool_start: '#b07d3a',
+  team_tool_end: '#b07d3a', team_text: '#b07d3a', team_done: '#b07d3a',
+  compact_done: '#b07d3a', done: '#4a7c59', error: '#c44'
 };
 
 let sseTimers = [];
@@ -979,7 +1013,7 @@ function addSseLine(type, data, delay) {
   const line = document.createElement('div');
   line.className = 'sse-line';
   line.style.animationDelay = '0ms';
-  const color = typeColors[type] || '#c8d8e8';
+  const color = typeColors[type] || '#333';
   line.innerHTML = `<span class="sse-event-type" style="color:${color}">event: ${type}</span><span class="sse-data">data: ${colorizeJson(data)}</span>`;
   body.appendChild(line);
   body.scrollTop = body.scrollHeight;
