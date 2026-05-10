@@ -10,35 +10,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `claude-code-java-service` — 纯 Java 17 库，包含所有 Agent 能力，无框架依赖
 - `claude-code-java-start` — Spring Boot 3.2 应用层，提供 CLI REPL、REST API 和 Web Playground
 
-## 构建与运行
+## 构建、测试与运行
 
 **配置**（首次运行前必须完成）：
-```bash
-# 编辑 claude-code-java-start/src/main/resources/claude.properties
-# 将 OPENAI_API_KEY=your_api_key_here 替换为真实的 API Key
-# 或设置环境变量：export OPENAI_API_KEY=<your-key>
-```
+启动服务后访问 Playground，点击顶部「设置」菜单配置模型（API Key、Base URL、Model ID）。配置保存在服务端 `.models/models.json`，重启后自动恢复。
 
-**编译**：
+**常用命令**：
 ```bash
+# 编译全部模块
 mvn compile
-```
 
-**Web Playground + REST API 模式**（推荐，端口 8080）：
-```bash
+# 编译指定模块
+mvn compile -pl claude-code-java-service
+
+# 运行测试（JUnit 5，maven-surefire-plugin）
+mvn test
+mvn test -Dtest=ClassName          # 运行单个测试类
+mvn test -pl claude-code-java-service
+
+# 打包可执行 fat JAR（输出在 claude-code-java-start/target/）
+mvn package
+
+# Web Playground + REST API 模式（推荐，端口 8080）
 mvn exec:java -pl claude-code-java-start \
   -Dexec.mainClass="ai.claude.code.Application"
 # 访问 http://localhost:8080
-```
 
-**CLI 交互模式**（REPL）：
-```bash
+# CLI 交互模式（REPL）
 mvn exec:java -pl claude-code-java-start \
   -Dexec.mainClass="ai.claude.code.Application" \
   -Dspring.profiles.active=cli
 ```
 
-**调试**：在 `claude.properties` 中设置 `DEBUG_PRINT_PAYLOAD=true` 可打印完整的 API 请求/响应报文。
+**调试**：设置环境变量 `DEBUG_PRINT_PAYLOAD=true` 可打印完整的 API 请求/响应报文。
 
 ## 架构
 
@@ -53,8 +57,8 @@ mvn exec:java -pl claude-code-java-start \
 
 ```
 src/main/java/ai/claude/code/
-├── core/        — OpenAiClient, AnthropicClient, ClientFactory, BaseTools,
-│                  SecurityUtils, ShellUtils, ToolHandler, AgentEventListener
+├── core/        — OpenAiClient, BaseTools, SecurityUtils, ShellUtils,
+│                  ToolHandler, AgentEventListener
 ├── capability/  — TodoManager, ContextCompactor, BackgroundRunner,
 │                  TaskStore, WorktreeManager, SkillLoader, MessageBus,
 │                  TeammateRunner, SessionStore, TeamProtocol, TaskPoller
@@ -95,7 +99,7 @@ src/main/java/ai/claude/code/
     └── AgentBeans.java      — Spring @Bean 配置，调用 AgentAssembler.build()
 src/main/resources/
 ├── static/index.html        — Web Playground 单页应用（无构建步骤，直接修改生效）
-└── claude.properties        — API Key、模型、调试开关
+└── application.properties   — Spring Boot 配置（端口、调试开关等）
 ```
 
 ### 核心设计模式
@@ -135,16 +139,11 @@ src/main/resources/
 
 **Spring Bean 一致性**：`AgentBeans.java` 将所有 capability 创建为 Spring Bean，然后传入 `AgentAssembler.build()`，确保 CliRunner 和 AgentLoop 共享同一实例。`TeammateRunner` 也作为 Spring Bean 注入，保证线程池单例。
 
-**配置优先级**：`System.getenv() > claude.properties > 默认值`
-
 ### 配置文件
 
-`claude-code-java-start/src/main/resources/claude.properties`（已纳入版本控制，API Key 为占位符）：
-- `OPENAI_API_KEY` — OpenAI 协议 API 密钥（必填，或通过环境变量设置）
-- `OPENAI_BASE_URL` — 服务地址，默认 `https://api.openai.com`
-- `OPENAI_MODEL_ID` — 模型 ID，如 `gpt-4o`
-- `CLIENT_TYPE` — `openai`（默认）或 `anthropic`
-- `DEBUG_PRINT_PAYLOAD` — 是否打印完整 API 报文
+`claude-code-java-start/src/main/resources/application.properties`：
+- `server.port` — 服务端口，默认 `8080`
+- `DEBUG_PRINT_PAYLOAD` — 是否打印完整 API 报文（仅支持环境变量设置）
 
 ## REST API
 
@@ -209,33 +208,7 @@ Response: { "status": "UP" }
 
 **无构建步骤**：修改 HTML/CSS/JS 后刷新浏览器即可，Spring Boot 静态资源服务直接生效。
 
-**关键 JS 函数**：
-
-| 函数 | 职责 |
-|------|------|
-| `handleSseEvent(type, payload)` | SSE 事件分发总入口 |
-| `appendAiRow()` | 创建 `.msg-ai` 行，返回 `.ai-body` |
-| `getOrCreateTextEl()` | 创建/复用文字块（内含头像，仅文字回复时调用） |
-| `recordCompact(summary, file)` | 记录压缩，卡片插入对话流顶部（多次压缩更新同一张卡） |
-| `openDrawer(type, data)` | 打开右侧工作空间抽屉（`'compact'` / `'teammate'`） |
-| `renderMiniMessages(container, msgs, onCompactClick)` | 渲染 mini 消息列表（复用主对话流 CSS 类），第三参数为压缩分隔符点击回调 |
-| `buildTranscriptChain(latestFile)` | 沿 `_transcript_file` 链递归加载，返回 oldest→newest 有序数组 |
-| `showChainTab(chain, idx)` | 渲染指定层级的 Tab 内容，构造层级间跳转回调 |
-| `updateTmFloat()` | 根据 `tmFloatAgents` 更新/隐藏输入框上方悬浮状态条 |
-| `switchSession(id)` | 恢复历史会话（压缩卡、Teammate 卡、工具卡正确还原） |
-| `loadSessionList()` | 加载侧边栏会话列表，含 teammate 数量徽标 |
-
-**关键全局状态**：
-
-```javascript
-let sessionId          // 当前会话 ID（SSE session_id 事件赋值）
-let compactSessions    // [{summary, transcriptFile}]，多次压缩追加
-let compactCard        // 压缩卡 DOM 元素（始终唯一，置于顶部）
-let tmFloatAgents      // { agentId → {toolCount, lastStatus} }，悬浮条数据源
-let tmCompletedAgents  // { agentId → {toolCount} }，done 后移入此 map
-let currentTeammateSessions  // { agentId → tmSessionId }，抽屉加载用
-let hasAutoOpenedDrawer      // 首次 team_tool_start 自动开抽屉后置 true
-```
+前端 SSE 事件总入口为 `handleSseEvent(type, payload)`，负责将流式事件渲染为对话流中的思考卡片、工具卡片、文字气泡、压缩卡片和 Teammate 状态条。具体 DOM 操作函数和全局状态变量参见源码注释。
 
 ## 约束
 
@@ -253,6 +226,7 @@ let hasAutoOpenedDrawer      // 首次 team_tool_start 自动开抽屉后置 tru
 - `docs/TESTING.md` — 核心场景测试报告（10 个场景，含 Web Playground 全流程）
 - `docs/CHANGELOG.md` — 每次迭代的变更记录
 - `DESIGN.md` — Linear 设计系统参考（Web Playground UI 风格规范）
+- `CONTRIBUTING.md` — 扩展指南（新增工具、SSE 事件、Teammate 工具、Web Playground）
 
 ## 开发规范
 

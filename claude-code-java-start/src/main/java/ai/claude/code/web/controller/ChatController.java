@@ -1,5 +1,6 @@
 package ai.claude.code.web.controller;
 
+import ai.claude.code.capability.ModelStore;
 import ai.claude.code.capability.SessionStore;
 import ai.claude.code.web.dto.ChatRequest;
 import ai.claude.code.web.dto.ChatResponse;
@@ -8,6 +9,7 @@ import ai.claude.code.web.service.ChatService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -47,6 +49,9 @@ public class ChatController {
 
     @Autowired
     private SessionStore sessionStore;
+
+    @Autowired
+    private ModelStore modelStore;
 
     /**
      * 发送消息给 Agent。
@@ -130,5 +135,38 @@ public class ChatController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Get model config from .models/models.json.
+     * GET /api/model-config
+     */
+    @GetMapping(value = "/model-config", produces = "application/json")
+    public String getModelConfig() {
+        JsonObject cfg = modelStore.load();
+        // Mask apiKey for security: only return last 4 chars
+        if (cfg.has("apiKey") && !cfg.get("apiKey").isJsonNull()) {
+            String key = cfg.get("apiKey").getAsString();
+            if (key.length() > 4) {
+                cfg.addProperty("apiKey", "***" + key.substring(key.length() - 4));
+            } else if (!key.isEmpty()) {
+                cfg.addProperty("apiKey", "***");
+            }
+        }
+        return cfg.toString();
+    }
+
+    /**
+     * Save model config to .models/models.json.
+     * POST /api/model-config
+     */
+    @PostMapping(value = "/model-config", consumes = "application/json")
+    public ResponseEntity<Void> saveModelConfig(@RequestBody java.util.Map<String, String> config) {
+        JsonObject obj = new JsonObject();
+        if (config.containsKey("apiKey"))  obj.addProperty("apiKey",  config.get("apiKey"));
+        if (config.containsKey("baseUrl")) obj.addProperty("baseUrl", config.get("baseUrl"));
+        if (config.containsKey("modelId")) obj.addProperty("modelId", config.get("modelId"));
+        modelStore.save(obj);
+        return ResponseEntity.ok().build();
     }
 }

@@ -20,11 +20,11 @@
 
 ### 这是什么？
 
-**claude-code-java** 是一个可嵌入任何 Java 应用的 AI Agent 引擎。它兼容 **OpenAI Chat Completions 协议**，可对接 OpenAI、Azure OpenAI、Ollama、DashScope 或任何兼容端点，同时也支持直接对接 Anthropic Messages API。
+**claude-code-java** 是一个可嵌入任何 Java 应用的 AI Agent 引擎。它兼容 **OpenAI Chat Completions 协议**，可对接 OpenAI、Azure OpenAI、Ollama、DashScope 或任何兼容端点。
 
 提供三种开箱即用的交互方式：
 - **CLI 模式** — 终端 REPL，适合本地开发和调试
-- **REST API 模式** — 标准 HTTP 接口（同步），适合集成到其他系统
+- **REST API 模式** — 标准 HTTP 接口（同步 + SSE 流式），适合集成到其他系统
 - **Web Playground** — 内置实时流式对话界面，可视化 Agent 工作过程
 
 所有能力都源自同一个核心循环：
@@ -93,8 +93,8 @@ while ("tool_calls".equals(finishReason)) {
 ```
 claude-code-java （父 pom）
 ├── claude-code-java-service  —— 纯 Java 17 库（无框架依赖）
-│   ├── core/        OpenAiClient · AnthropicClient · ClientFactory
-│   │                BaseTools · SecurityUtils · ShellUtils · ToolHandler
+│   ├── core/        OpenAiClient · BaseTools · SecurityUtils
+│   │                ShellUtils · ToolHandler
 │   ├── capability/  TodoManager · ContextCompactor · BackgroundRunner
 │   │                TaskStore · WorktreeManager · SkillLoader
 │   │                MessageBus · TeammateRunner · SessionStore
@@ -140,19 +140,15 @@ git clone https://github.com/fluentlc/claude-code-java.git
 cd claude-code-java
 ```
 
-编辑 `claude-code-java-start/src/main/resources/claude.properties`，填入你的 API Key：
+启动后访问 Playground，点击顶部「设置」菜单配置模型：
 
-```properties
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
-OPENAI_BASE_URL=https://api.openai.com
-OPENAI_MODEL_ID=gpt-4o
-```
+| 配置项 | 说明 |
+|--------|------|
+| API Key | 你的 OpenAI 协议 API 密钥 |
+| Base URL | 服务端地址，如 `https://api.openai.com` |
+| Model ID | 模型 ID，如 `gpt-4o` |
 
-也可通过环境变量覆盖（优先级最高）：
-
-```bash
-export OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
-```
+配置保存在服务端 `.models/models.json`，重启后自动恢复。
 
 **第二步：编译**
 
@@ -274,8 +270,8 @@ public class MyTool implements ToolProvider {
 
     @Override
     public List<JsonObject> definitions() {
-        return List.of(OpenAiClient.toolDef("my_tool", "Does something useful.",
-            OpenAiClient.schema("arg", "string", "true")));
+        return List.of(ToolUtils.toolDef("my_tool", "Does something useful.",
+            ToolUtils.schema("arg", "string", "true")));
     }
 }
 
@@ -371,11 +367,11 @@ Teammate 在独立线程中运行完整 LLM 循环，通过 `MessageBus` 通信�
 
 ### What is this?
 
-**claude-code-java** is an embeddable AI Agent engine for Java applications. It speaks the **OpenAI Chat Completions protocol** and works with OpenAI, Azure OpenAI, Ollama, DashScope, or any compatible endpoint. Direct Anthropic Messages API support is also included.
+**claude-code-java** is an embeddable AI Agent engine for Java applications. It speaks the **OpenAI Chat Completions protocol** and works with OpenAI, Azure OpenAI, Ollama, DashScope, or any compatible endpoint.
 
 Three interaction modes out of the box:
 - **CLI mode** — Terminal REPL for local development
-- **REST API mode** — Standard HTTP interface (synchronous) for system integration
+- **REST API mode** — Standard HTTP interface (synchronous + SSE streaming) for system integration
 - **Web Playground** — Built-in real-time streaming UI to visualize agent execution
 
 ---
@@ -398,8 +394,8 @@ Key features:
 ```
 claude-code-java (parent pom)
 ├── claude-code-java-service  — Pure Java 17 library (no framework dependencies)
-│   ├── core/        OpenAiClient · AnthropicClient · ClientFactory
-│   │                BaseTools · SecurityUtils · ShellUtils · ToolHandler
+│   ├── core/        OpenAiClient · BaseTools · SecurityUtils
+│   │                ShellUtils · ToolHandler
 │   ├── capability/  TodoManager · ContextCompactor · BackgroundRunner
 │   │                TaskStore · WorktreeManager · SkillLoader
 │   │                MessageBus · TeammateRunner · SessionStore
@@ -428,13 +424,15 @@ git clone https://github.com/fluentlc/claude-code-java.git
 cd claude-code-java
 ```
 
-Edit `claude-code-java-start/src/main/resources/claude.properties`:
+After starting the server, open the Playground and configure your model via the **Settings** menu in the top nav:
 
-```properties
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
-OPENAI_BASE_URL=https://api.openai.com
-OPENAI_MODEL_ID=gpt-4o
-```
+| Setting | Description |
+|---------|-------------|
+| API Key | Your OpenAI-compatible API key |
+| Base URL | Endpoint, e.g. `https://api.openai.com` |
+| Model ID | Model identifier, e.g. `gpt-4o` |
+
+Configuration is persisted server-side in `.models/models.json` and survives restarts.
 
 **Step 2: Build**
 
@@ -487,8 +485,8 @@ public class MyTool implements ToolProvider {
     }
     @Override
     public List<JsonObject> definitions() {
-        return List.of(OpenAiClient.toolDef("my_tool", "Does something useful.",
-            OpenAiClient.schema("arg", "string", "true")));
+        return List.of(ToolUtils.toolDef("my_tool", "Does something useful.",
+            ToolUtils.schema("arg", "string", "true")));
     }
 }
 

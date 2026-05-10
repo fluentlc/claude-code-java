@@ -38,7 +38,7 @@ public class TeammateRunner {
 
     /** LLM 客户端（所有 Teammate 共享同一实例，HttpURLConnection 是无状态的）*/
     /** Shared LLM client (stateless HttpURLConnection, safe to share) */
-    private final OpenAiClient client;
+    private OpenAiClient client;
 
     /** 工作目录，用于 BaseTools 路径安全检查 / Working directory for BaseTools path safety */
     private final String workDir;
@@ -175,6 +175,14 @@ public class TeammateRunner {
     }
 
     // ── 主 SSE 监听器注册 / Main SSE listener registration ──
+
+    /**
+     * 动态切换 LLM 客户端（用于 Playground 中用户自定义模型配置）。
+     * Dynamically switch the LLM client (used for per-request model config from Playground).
+     */
+    public void setClient(OpenAiClient client) {
+        this.client = client;
+    }
 
     /**
      * 注册当前流请求的主监听器，供 TeammateLoop 转发事件使用。

@@ -1,10 +1,12 @@
 package ai.claude.code.web.service;
 
+import ai.claude.code.agent.AgentAssembler;
 import ai.claude.code.agent.AgentLoop;
+import ai.claude.code.capability.ModelStore;
 import ai.claude.code.capability.SessionStore;
-import ai.claude.code.core.OpenAiClient;
 import com.google.gson.JsonArray;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -17,10 +19,13 @@ import java.util.UUID;
 public class ChatService {
 
     @Autowired
-    private AgentLoop agentLoop;
+    private SessionStore sessionStore;
 
     @Autowired
-    private SessionStore sessionStore;
+    private ModelStore modelStore;
+
+    @Value("${claude.workdir:${user.dir}}")
+    private String workDir;
 
     /**
      * 处理一条用户消息，返回 Agent 回复。
@@ -37,15 +42,13 @@ public class ChatService {
             sessionId = ts + "-" + UUID.randomUUID().toString().substring(0, 8);
         }
 
-        // 从文件加载历史消息，进程重启后自动恢复 / Load history from file (survives restarts)
         JsonArray messages = sessionStore.load(sessionId);
-        messages.add(OpenAiClient.userMessage(message));
+        messages.add(ai.claude.code.core.OpenAiClient.userMessage(message));
 
-        String reply = agentLoop.run(messages);
+        AgentLoop loop = AgentAssembler.build(modelStore.createClient(), workDir);
+        String reply = loop.run(messages);
 
-        // 持久化本轮对话 / Persist this conversation turn
         sessionStore.save(sessionId, messages);
-
         return new String[]{sessionId, reply};
     }
 

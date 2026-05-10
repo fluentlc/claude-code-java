@@ -406,7 +406,7 @@ Created worktree 'feature-auth' at .worktrees/feature-auth (branch: wt/feature-a
 | `/help` | 直接输入 | 打印所有 slash 命令说明，不调用 LLM |
 | `/tasks` | 直接输入 | 显示 TodoManager + TaskStore 双视图 |
 | `/skill` | 直接输入 | 列出 skills/ 目录下所有技能名称和描述 |
-| `/skill code-review` | 直接输入 | 显示 code-review 技能的完整 SKILL.md 内容 |
+| `/skill code-review` | 直接输入 | 加载 code-review 技能提示词并注入上下文 |
 | `/compact` | 对话较长时输入 | 触发全量压缩，打印压缩后消息数 |
 | `/team` | 直接输入 | 显示 lead 收件箱消息数 + 未认领任务列表 |
 | `/worktree` | 直接输入 | 列出所有 worktree（JSON 格式） |
